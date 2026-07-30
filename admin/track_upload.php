@@ -1,0 +1,6 @@
+<?php
+require_once __DIR__.'/../includes/bootstrap.php';require_login();header('Content-Type: application/json; charset=utf-8');
+try{verify_csrf();$albumId=(int)($_POST['album_id']??0);$s=$pdo->prepare('SELECT id FROM albums WHERE id=?');$s->execute([$albumId]);if(!$s->fetch())throw new RuntimeException('Album nicht gefunden.');
+$file=$_FILES['file']??null;if(!$file)throw new RuntimeException('Keine Datei empfangen.');$stored=upload_file($file,dirname(__DIR__).'/uploads/audio',['audio/mpeg','audio/wav','audio/x-wav','audio/flac','audio/mp4','audio/x-m4a','audio/ogg','application/ogg'],500*1024*1024);
+$title=trim($_POST['title']??'')?:pathinfo((string)$file['name'],PATHINFO_FILENAME);$disc=1;$s=$pdo->prepare('SELECT COALESCE(MAX(track_no),0)+1 FROM tracks WHERE album_id=? AND disc_no=1');$s->execute([$albumId]);$no=max(1,(int)$s->fetchColumn());$duration=max(0,(int)($_POST['duration']??0));$s=$pdo->prepare('INSERT INTO tracks(album_id,title,disc_no,track_no,audio_file,original_name,file_size,duration_seconds) VALUES(?,?,?,?,?,?,?,?)');$s->execute([$albumId,$title,$disc,$no,$stored,$file['name'],$file['size'],$duration]);echo json_encode(['ok'=>true,'id'=>(int)$pdo->lastInsertId(),'title'=>$title,'disc_no'=>$disc,'track_no'=>$no]);
+}catch(Throwable $e){http_response_code(422);echo json_encode(['ok'=>false,'message'=>$e->getMessage()]);}
