@@ -122,3 +122,8 @@ Vor dem Update wird ein Backup der Programmdateien unter `storage/backups/` erst
 - Albuminformationen: Erscheinungsjahr, Genre, Label und Copyright
 - Backend-Darstellung Auto/Hell/Dunkel, lokal pro Browser gespeichert
 - Updater mit Release-Changelog, Backupübersicht und Rollback
+
+
+## GitHub-Updater
+
+Der Updater bevorzugt eine als Release-Asset hochgeladene Anwendungs-ZIP. Ist kein ZIP-Asset vorhanden, verwendet er automatisch die von GitHub erzeugte **Source code (zip)**-Datei (`zipball_url`). Der zusätzliche Repository-Ordner im Archiv wird automatisch erkannt. `config.php`, `uploads/`, `storage/` und `.git/` bleiben geschützt.

@@ -21,16 +21,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'install') {
             $release = latest_github_release(true);
             if (!release_update_available($release)) throw new RuntimeException('Es ist kein neueres Release verfügbar.');
-            $asset = release_zip_asset($release);
-            if (!$asset || empty($asset['browser_download_url'])) {
-                throw new RuntimeException('Dem GitHub-Release ist keine ZIP-Datei angehängt. Bitte eine vollständige Update-ZIP als Release Asset hochladen.');
+            $package = release_zip_source($release);
+            if (!$package || empty($package['url'])) {
+                throw new RuntimeException('Für dieses GitHub-Release konnte keine ZIP-Datei gefunden werden.');
             }
             if (!class_exists(ZipArchive::class)) throw new RuntimeException('ZipArchive ist auf dem Server nicht verfügbar.');
             $tmpBase = $root . '/storage/update-' . bin2hex(random_bytes(6));
             $zipFile = $tmpBase . '.zip';
             $extractDir = $tmpBase . '-files';
             if (!is_dir($root . '/storage') && !mkdir($root . '/storage', 0775, true)) throw new RuntimeException('Storage-Verzeichnis ist nicht beschreibbar.');
-            download_remote_file((string)$asset['browser_download_url'], $zipFile);
+            download_remote_file((string)$package['url'], $zipFile);
             mkdir($extractDir, 0775, true);
             $zip = new ZipArchive();
             if ($zip->open($zipFile) !== true) throw new RuntimeException('Update-ZIP konnte nicht geöffnet werden.');
@@ -63,7 +63,7 @@ if ($release === null) {
 render_header('Updates', true);
 $latest = normalized_version((string)($release['tag_name'] ?? ''));
 $available = $release ? release_update_available($release) : false;
-$asset = $release ? release_zip_asset($release) : null;
+$package = $release ? release_zip_source($release) : null;
 $backups = application_backups($root);
 ?>
 <div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1">Updates</h1><p class="text-body-secondary mb-0">Neue Versionen direkt aus den GitHub-Releases installieren.</p></div></div>
@@ -79,9 +79,9 @@ $backups = application_backups($root);
         <?php if (!empty($release['name'])): ?><div class="mt-1"><?=e((string)$release['name'])?></div><?php endif; ?><?php if (!empty($release['body'])): ?><details class="mt-3"><summary class="fw-semibold">Changelog anzeigen</summary><div class="release-notes mt-2 p-3 rounded bg-body-tertiary"><?=nl2br(e((string)$release['body']))?></div></details><?php endif; ?>
         <?php if ($available): ?>
           <div class="alert alert-success mt-3 mb-3">Eine neue Version ist verfügbar.</div>
-          <?php if ($asset): ?>
-          <form method="post" onsubmit="return confirm('Update jetzt installieren? Vorher wird automatisch ein Backup erstellt.')"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="install"><button class="btn btn-primary">Version <?=e($latest)?> installieren</button></form>
-          <?php else: ?><div class="alert alert-warning mt-3 mb-0">Das Release enthält kein ZIP-Asset. Hänge beim Erstellen des Releases eine vollständige ZIP der Anwendung an.</div><?php endif; ?>
+          <?php if ($package): ?>
+          <form method="post" onsubmit="return confirm('Update jetzt installieren? Vorher wird automatisch ein Backup erstellt.')"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="install"><button class="btn btn-primary">Version <?=e($latest)?> installieren</button></form><?php if (($package['type'] ?? '') === 'source'): ?><div class="small text-body-secondary mt-2">Verwendet die automatisch von GitHub erzeugte <strong>Source code (zip)</strong>-Datei.</div><?php else: ?><div class="small text-body-secondary mt-2">Verwendet das Release-Asset <strong><?=e((string)($package['name'] ?? 'ZIP'))?></strong>.</div><?php endif; ?>
+          <?php else: ?><div class="alert alert-warning mt-3 mb-0">Für dieses Release konnte keine ZIP-Datei gefunden werden.</div><?php endif; ?>
         <?php else: ?><div class="alert alert-secondary mt-3 mb-0">Die Installation ist aktuell.</div><?php endif; ?>
       <?php endif; ?>
     </div></div>

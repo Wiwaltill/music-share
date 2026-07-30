@@ -254,16 +254,30 @@ function release_update_available(array $release): bool {
     return $latest !== '' && version_compare($latest, APP_VERSION, '>');
 }
 
-function release_zip_asset(array $release): ?array {
+function release_zip_source(array $release): ?array {
     $assets = is_array($release['assets'] ?? null) ? $release['assets'] : [];
     foreach ($assets as $asset) {
         $name = strtolower((string)($asset['name'] ?? ''));
-        if (str_ends_with($name, '.zip') && str_contains($name, 'album-share')) return $asset;
+        if (str_ends_with($name, '.zip') && (str_contains($name, 'music-share') || str_contains($name, 'album-share'))) {
+            return ['url' => (string)($asset['browser_download_url'] ?? ''), 'type' => 'asset', 'name' => (string)($asset['name'] ?? 'Release-ZIP')];
+        }
     }
     foreach ($assets as $asset) {
-        if (str_ends_with(strtolower((string)($asset['name'] ?? '')), '.zip')) return $asset;
+        if (str_ends_with(strtolower((string)($asset['name'] ?? '')), '.zip')) {
+            return ['url' => (string)($asset['browser_download_url'] ?? ''), 'type' => 'asset', 'name' => (string)($asset['name'] ?? 'Release-ZIP')];
+        }
+    }
+    $zipball = trim((string)($release['zipball_url'] ?? ''));
+    if ($zipball !== '') {
+        return ['url' => $zipball, 'type' => 'source', 'name' => 'GitHub Source code (zip)'];
     }
     return null;
+}
+
+function release_zip_asset(array $release): ?array {
+    $source = release_zip_source($release);
+    if (!$source || ($source['type'] ?? '') !== 'asset') return null;
+    return ['browser_download_url' => $source['url'], 'name' => $source['name']];
 }
 
 function download_remote_file(string $url, string $target): void {
