@@ -110,3 +110,8 @@ Vor dem Update wird ein Backup der Programmdateien unter `storage/backups/` erst
 - Alben sind standardmäßig nur für Ersteller und Administratoren sichtbar
 - Interne Mitverwaltung pro Album
 - Vollständige Albumlöschung inklusive Dateien und Freigaben
+
+
+## Version 1.16.0
+
+- Dezente GitHub-Signatur „Music Share · Open Source“ auf der öffentlichen Albumansicht.

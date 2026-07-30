@@ -9,3 +9,9 @@
 html, body { min-height: 100%; }
 body { min-height: 100vh; display: flex; flex-direction: column; }
 body > main { flex: 1 0 auto; width: 100%; }
+
+.public-project-footer{z-index:2;text-align:center;padding:1.25rem 1rem 1.5rem;font-size:.75rem;line-height:1;color:inherit;opacity:.58}
+.public-project-footer a{display:inline-flex;align-items:center;gap:.38rem;color:inherit;text-decoration:none;transition:opacity .15s ease}
+.public-project-footer a:hover,.public-project-footer a:focus{color:inherit;opacity:1}
+.github-octicon{display:block;flex:0 0 auto}
+@media(max-width:700px){.public-project-footer{padding:.85rem 1rem 7.5rem}}
