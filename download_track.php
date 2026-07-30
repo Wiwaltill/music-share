@@ -1,0 +1,8 @@
+<?php
+require_once __DIR__.'/includes/bootstrap.php';
+$token=(string)($_GET['token']??''); $trackId=(int)($_GET['track']??0);
+$s=$pdo->prepare('SELECT s.id share_id,s.password_hash,s.expires_at,s.allow_download,t.* FROM tracks t JOIN shares s ON s.album_id=t.album_id WHERE s.token=? AND t.id=?');
+$s->execute([$token,$trackId]); $row=$s->fetch();
+if(!$row || !$row['allow_download'] || !share_access_granted(['id'=>$row['share_id'],'password_hash'=>$row['password_hash'],'expires_at'=>$row['expires_at']])){http_response_code(403);exit;}
+$file=__DIR__.'/uploads/audio/'.$row['audio_file']; if(!is_file($file)){http_response_code(404);exit;}
+header('Content-Type: application/octet-stream'); header('Content-Disposition: attachment; filename="'.str_replace('"','',$row['original_name']).'"'); header('Content-Length: '.filesize($file)); readfile($file);
