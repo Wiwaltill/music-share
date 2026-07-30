@@ -4,7 +4,7 @@ $token=(string)($_GET['token']??'');
 $previewAlbumId=(int)($_GET['album_id']??0);
 $isPreview=$previewAlbumId>0;
 if($isPreview){
-    require_login();
+    require_album_access($previewAlbumId);
     $s=$pdo->prepare('SELECT id album_id,title,artist,description,cover_file FROM albums WHERE id=?');
     $s->execute([$previewAlbumId]);
     $album=$s->fetch();

@@ -23,6 +23,22 @@ function run_migrations(PDO $pdo): void {
             $pdo->exec("ALTER TABLE users ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1 AFTER role");
         }
 
+
+        $albumCols = $pdo->query("SHOW COLUMNS FROM albums")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('owner_user_id', $albumCols, true)) {
+            $pdo->exec("ALTER TABLE albums ADD COLUMN owner_user_id INT UNSIGNED NULL AFTER id");
+            $firstUser = (int)$pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
+            if ($firstUser > 0) $pdo->exec("UPDATE albums SET owner_user_id=" . $firstUser . " WHERE owner_user_id IS NULL");
+        }
+        $pdo->exec("CREATE TABLE IF NOT EXISTS album_collaborators (
+            album_id INT UNSIGNED NOT NULL,
+            user_id INT UNSIGNED NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(album_id,user_id),
+            CONSTRAINT fk_album_collab_album FOREIGN KEY(album_id) REFERENCES albums(id) ON DELETE CASCADE,
+            CONSTRAINT fk_album_collab_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
         $pdo->exec("CREATE TABLE IF NOT EXISTS settings (
             setting_key VARCHAR(100) PRIMARY KEY,
             setting_value TEXT NULL,

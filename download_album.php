@@ -3,7 +3,7 @@ require_once __DIR__.'/includes/bootstrap.php';
 $token=(string)($_GET['token']??'');
 $albumId=(int)($_GET['album_id']??0);
 if($albumId>0){
-    require_login();
+    require_album_access($albumId);
     $s=$pdo->prepare('SELECT id album_id,title FROM albums WHERE id=?');
     $s->execute([$albumId]);
     $share=$s->fetch();

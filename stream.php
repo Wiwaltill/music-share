@@ -2,7 +2,7 @@
 require_once __DIR__.'/includes/bootstrap.php';
 $token=(string)($_GET['token']??''); $trackId=(int)($_GET['track']??0); $albumId=(int)($_GET['album_id']??0);
 if($albumId>0){
-    require_login();
+    require_album_access($albumId);
     $s=$pdo->prepare('SELECT t.* FROM tracks t WHERE t.album_id=? AND t.id=?');
     $s->execute([$albumId,$trackId]);
     $row=$s->fetch();

@@ -31,6 +31,32 @@ function current_user(): ?array {
 }
 function is_admin(): bool { return (current_user()['role'] ?? '') === 'admin'; }
 function require_admin(): void { require_login(); if (!is_admin()) { http_response_code(403); exit('Keine Berechtigung.'); } }
+function can_access_album(int $albumId): bool {
+    global $pdo;
+    if ($albumId < 1 || !is_logged_in()) return false;
+    if (is_admin()) return true;
+    $uid = (int)(current_user()['id'] ?? 0);
+    $stmt = $pdo->prepare('SELECT 1 FROM albums a LEFT JOIN album_collaborators ac ON ac.album_id=a.id AND ac.user_id=? WHERE a.id=? AND (a.owner_user_id=? OR ac.user_id IS NOT NULL) LIMIT 1');
+    $stmt->execute([$uid,$albumId,$uid]);
+    return (bool)$stmt->fetchColumn();
+}
+function can_manage_album_access(int $albumId): bool {
+    global $pdo;
+    if ($albumId < 1 || !is_logged_in()) return false;
+    if (is_admin()) return true;
+    $stmt=$pdo->prepare('SELECT 1 FROM albums WHERE id=? AND owner_user_id=?');
+    $stmt->execute([$albumId,(int)(current_user()['id'] ?? 0)]);
+    return (bool)$stmt->fetchColumn();
+}
+function require_album_access(int $albumId): void {
+    require_login();
+    if (!can_access_album($albumId)) { http_response_code(403); exit('Keine Berechtigung für dieses Album.'); }
+}
+function require_album_owner_or_admin(int $albumId): void {
+    require_login();
+    if (!can_manage_album_access($albumId)) { http_response_code(403); exit('Nur der Ersteller oder ein Administrator darf diese Aktion ausführen.'); }
+}
+
 function get_setting(string $key, ?string $default = null): ?string {
     global $pdo;
     static $cache = [];

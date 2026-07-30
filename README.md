@@ -103,3 +103,10 @@ Administratoren können unter **Einstellungen → Updates** das neueste GitHub-R
 Damit die direkte Installation funktioniert, muss das Release eine vollständige ZIP-Datei der Anwendung als **Release Asset** enthalten. Der Dateiname sollte `album-share-app-vX.Y.Z.zip` lauten.
 
 Vor dem Update wird ein Backup der Programmdateien unter `storage/backups/` erstellt. `config.php`, `uploads/`, `storage/` und die Datenbank werden nicht überschrieben. Erforderliche PHP-Erweiterungen: cURL oder `allow_url_fopen`, außerdem ZipArchive.
+
+
+## Version 1.14
+- Sticky Backend-Footer
+- Alben sind standardmäßig nur für Ersteller und Administratoren sichtbar
+- Interne Mitverwaltung pro Album
+- Vollständige Albumlöschung inklusive Dateien und Freigaben
