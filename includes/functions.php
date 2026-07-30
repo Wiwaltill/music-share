@@ -18,7 +18,39 @@ function redirect(string $path): never { header('Location: ' . base_url($path));
 function is_logged_in(): bool { return !empty($_SESSION['user_id']); }
 function require_login(): void { if (!is_logged_in()) redirect('admin/login.php'); }
 function csrf_token(): string { if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32)); return $_SESSION['csrf']; }
-function verify_csrf(): void { if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'] ?? '')) { http_response_code(419); exit('Ungültige Sitzung.'); } }
+function ini_bytes(string $value): int {
+    $value = trim($value);
+    if ($value === '') return 0;
+    $last = strtolower($value[strlen($value) - 1]);
+    $number = (float)$value;
+    return match ($last) {
+        'g' => (int)round($number * 1024 * 1024 * 1024),
+        'm' => (int)round($number * 1024 * 1024),
+        'k' => (int)round($number * 1024),
+        default => (int)$number,
+    };
+}
+function format_bytes(int $bytes): string {
+    if ($bytes >= 1024 * 1024 * 1024) return rtrim(rtrim(number_format($bytes / (1024 ** 3), 2, ',', '.'), '0'), ',') . ' GB';
+    if ($bytes >= 1024 * 1024) return rtrim(rtrim(number_format($bytes / (1024 ** 2), 2, ',', '.'), '0'), ',') . ' MB';
+    if ($bytes >= 1024) return rtrim(rtrim(number_format($bytes / 1024, 2, ',', '.'), '0'), ',') . ' KB';
+    return $bytes . ' B';
+}
+function verify_csrf(): void {
+    $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $postMax = ini_bytes((string)ini_get('post_max_size'));
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && $contentLength > 0 && empty($_POST) && empty($_FILES)) {
+        http_response_code(413);
+        $limit = $postMax > 0 ? ' Das PHP-Limit post_max_size liegt aktuell bei ' . format_bytes($postMax) . '.' : '';
+        exit('Der Upload ist größer als vom Server erlaubt.' . $limit . ' Bitte post_max_size und upload_max_filesize erhöhen.');
+    }
+    $sessionToken = (string)($_SESSION['csrf'] ?? '');
+    $postedToken = (string)($_POST['csrf'] ?? '');
+    if ($sessionToken === '' || $postedToken === '' || !hash_equals($sessionToken, $postedToken)) {
+        http_response_code(419);
+        exit('Die Sitzung ist abgelaufen oder das Formular ist nicht mehr gültig. Bitte die Seite neu laden und den Upload erneut starten.');
+    }
+}
 function flash(string $type, string $message): void { $_SESSION['flash'][] = compact('type','message'); }
 function get_flashes(): array { $f = $_SESSION['flash'] ?? []; unset($_SESSION['flash']); return $f; }
 function random_token(int $bytes = 24): string { return bin2hex(random_bytes($bytes)); }
@@ -28,7 +60,20 @@ function slugify(string $value): string {
     return trim($value, '-') ?: 'album';
 }
 function upload_file(array $file, string $targetDir, array $allowedMime, int $maxBytes): string {
-    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) throw new RuntimeException('Upload fehlgeschlagen.');
+    $error = (int)($file['error'] ?? UPLOAD_ERR_NO_FILE);
+    if ($error !== UPLOAD_ERR_OK) {
+        $message = match ($error) {
+            UPLOAD_ERR_INI_SIZE => 'Die Datei überschreitet upload_max_filesize (' . ini_get('upload_max_filesize') . ').',
+            UPLOAD_ERR_FORM_SIZE => 'Die Datei überschreitet die im Formular erlaubte Größe.',
+            UPLOAD_ERR_PARTIAL => 'Die Datei wurde nur teilweise hochgeladen.',
+            UPLOAD_ERR_NO_FILE => 'Es wurde keine Datei ausgewählt.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Auf dem Server fehlt das temporäre Upload-Verzeichnis.',
+            UPLOAD_ERR_CANT_WRITE => 'Die Datei konnte auf dem Server nicht gespeichert werden.',
+            UPLOAD_ERR_EXTENSION => 'Eine PHP-Erweiterung hat den Upload abgebrochen.',
+            default => 'Upload fehlgeschlagen (Fehlercode ' . $error . ').',
+        };
+        throw new RuntimeException($message);
+    }
     if (($file['size'] ?? 0) > $maxBytes) throw new RuntimeException('Datei ist zu groß.');
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mime = $finfo->file($file['tmp_name']);
