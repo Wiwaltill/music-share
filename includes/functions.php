@@ -283,15 +283,31 @@ function release_zip_asset(array $release): ?array {
 function download_remote_file(string $url, string $target): void {
     $out = fopen($target, 'wb');
     if (!$out) throw new RuntimeException('Temporäre Updatedatei konnte nicht erstellt werden.');
+
+    $host = strtolower((string)(parse_url($url, PHP_URL_HOST) ?? ''));
+    $isGithubApiArchive = $host === 'api.github.com' && (str_contains($url, '/zipball') || str_contains($url, '/tarball'));
+    $headers = [
+        'Accept: ' . ($isGithubApiArchive ? 'application/vnd.github+json' : 'application/octet-stream'),
+        'User-Agent: Music-Share-Updater/' . APP_VERSION,
+    ];
+    if ($isGithubApiArchive) {
+        $headers[] = 'X-GitHub-Api-Version: 2022-11-28';
+    }
+
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-            CURLOPT_FILE => $out, CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_CONNECTTIMEOUT => 15, CURLOPT_TIMEOUT => 300,
-            CURLOPT_HTTPHEADER => ['Accept: application/octet-stream', 'User-Agent: Music-Share-Updater/' . APP_VERSION],
+            CURLOPT_FILE => $out,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT => 300,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_FAILONERROR => false,
         ]);
         $ok = curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $contentType = (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
         $error = curl_error($ch);
         curl_close($ch);
         fclose($out);
@@ -299,12 +315,43 @@ function download_remote_file(string $url, string $target): void {
             @unlink($target);
             throw new RuntimeException('Update-ZIP konnte nicht heruntergeladen werden' . ($error ? ': ' . $error : ' (HTTP ' . $status . ').'));
         }
+        if ($contentType !== '' && str_contains(strtolower($contentType), 'application/json')) {
+            @unlink($target);
+            throw new RuntimeException('GitHub hat statt der ZIP-Datei eine API-Antwort geliefert.');
+        }
     } else {
         fclose($out);
-        $context = stream_context_create(['http' => ['timeout' => 300, 'header' => "User-Agent: Music-Share-Updater/" . APP_VERSION . "\r\n"]]);
-        if (!@copy($url, $target, $context)) throw new RuntimeException('Update-ZIP konnte nicht heruntergeladen werden.');
+        $context = stream_context_create(['http' => [
+            'method' => 'GET',
+            'timeout' => 300,
+            'follow_location' => 1,
+            'max_redirects' => 10,
+            'ignore_errors' => true,
+            'header' => implode("\r\n", $headers) . "\r\n",
+        ]]);
+        $data = @file_get_contents($url, false, $context);
+        $statusLine = $http_response_header[0] ?? '';
+        if ($data === false || !preg_match('/\s2\d\d\s/', $statusLine)) {
+            @unlink($target);
+            $status = preg_match('/\s(\d{3})\s/', $statusLine, $m) ? ' (HTTP ' . $m[1] . ')' : '';
+            throw new RuntimeException('Update-ZIP konnte nicht heruntergeladen werden' . $status . '.');
+        }
+        if (@file_put_contents($target, $data) === false) {
+            @unlink($target);
+            throw new RuntimeException('Update-ZIP konnte nicht gespeichert werden.');
+        }
     }
-    if (!is_file($target) || filesize($target) < 1000) throw new RuntimeException('Die heruntergeladene Updatedatei ist ungültig.');
+
+    if (!is_file($target) || filesize($target) < 1000) {
+        @unlink($target);
+        throw new RuntimeException('Die heruntergeladene Updatedatei ist ungültig.');
+    }
+
+    $signature = (string)@file_get_contents($target, false, null, 0, 4);
+    if ($signature !== "PK\x03\x04" && $signature !== "PK\x05\x06" && $signature !== "PK\x07\x08") {
+        @unlink($target);
+        throw new RuntimeException('Die heruntergeladene Datei ist kein gültiges ZIP-Archiv.');
+    }
 }
 
 function recursive_copy_update(string $source, string $destination, array $protectedTopLevel): void {

@@ -127,3 +127,8 @@ Vor dem Update wird ein Backup der Programmdateien unter `storage/backups/` erst
 ## GitHub-Updater
 
 Der Updater bevorzugt eine als Release-Asset hochgeladene Anwendungs-ZIP. Ist kein ZIP-Asset vorhanden, verwendet er automatisch die von GitHub erzeugte **Source code (zip)**-Datei (`zipball_url`). Der zusätzliche Repository-Ordner im Archiv wird automatisch erkannt. `config.php`, `uploads/`, `storage/` und `.git/` bleiben geschützt.
+
+
+## Version 1.19.0
+
+Der GitHub-Updater verwendet für die automatisch erzeugte Source-Code-ZIP nun den von GitHub empfohlenen API-Medientyp, folgt Weiterleitungen bis zum Archivserver und prüft die heruntergeladene Datei auf eine gültige ZIP-Signatur. Damit wird der HTTP-415-Fehler beim Abruf von `zipball_url` behoben.
