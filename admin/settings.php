@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $users = $pdo->query('SELECT id,username,display_name,role,is_active,created_at FROM users ORDER BY username')->fetchAll();
 render_header('Einstellungen', true);
 ?>
-<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1">Einstellungen</h1><p class="text-body-secondary mb-0">Seitendarstellung und Zugänge verwalten.</p></div></div>
+<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1">Einstellungen</h1><p class="text-body-secondary mb-0">Seitendarstellung und Zugänge verwalten.</p></div><a class="btn btn-outline-primary" href="update.php">Updates</a></div>
 <div class="row g-4">
   <div class="col-lg-5">
     <div class="card shadow-sm"><div class="card-body p-4">

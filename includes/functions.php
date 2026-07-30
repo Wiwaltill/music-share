@@ -147,10 +147,157 @@ function render_header(string $title, bool $admin = false): void {
     echo '</div></nav><main class="container py-4">';
     foreach ($flashes as $f) echo '<div class="alert alert-'.e($f['type']).'">'.e($f['message']).'</div>';
 }
-function render_footer(): void { echo '</main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="'.base_url('assets/js/player.js').'"></script></body></html>'; }
+function render_footer(): void {
+    echo '</main>';
+    if (is_admin_request()) {
+        echo '<footer class="border-top bg-body py-3 mt-auto"><div class="container d-flex flex-wrap justify-content-between gap-2 small text-body-secondary">';
+        echo '<span>Version ' . e(APP_VERSION) . '</span><span><a class="text-body-secondary" href="' . e(APP_GITHUB_URL) . '" target="_blank" rel="noopener noreferrer">GitHub</a>';
+        if (is_logged_in() && is_admin()) echo ' · <a class="text-body-secondary" href="' . base_url('admin/update.php') . '">Nach Updates suchen</a>';
+        echo '</span></div></footer>';
+    }
+    echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="'.base_url('assets/js/player.js').'"></script></body></html>';
+}
 
 function share_access_granted(array $share): bool {
     if (!empty($share['expires_at']) && strtotime((string)$share['expires_at']) < time()) return false;
     if (!empty($share['password_hash']) && empty($_SESSION['share_ok_'.$share['id']])) return false;
     return true;
+}
+
+function is_admin_request(): bool {
+    $script = str_replace('\\', '/', (string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    return str_contains($script, '/admin/');
+}
+
+function github_api_request(string $url): array {
+    $headers = [
+        'Accept: application/vnd.github+json',
+        'User-Agent: Music-Share-Updater/' . APP_VERSION,
+        'X-GitHub-Api-Version: 2022-11-28',
+    ];
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 25,
+            CURLOPT_HTTPHEADER => $headers,
+        ]);
+        $body = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        if ($body === false || $status < 200 || $status >= 300) {
+            throw new RuntimeException('GitHub konnte nicht abgefragt werden' . ($error ? ': ' . $error : ' (HTTP ' . $status . ').'));
+        }
+    } else {
+        $context = stream_context_create(['http' => [
+            'method' => 'GET', 'timeout' => 25, 'ignore_errors' => true,
+            'header' => implode("\r\n", $headers),
+        ]]);
+        $body = @file_get_contents($url, false, $context);
+        $statusLine = $http_response_header[0] ?? '';
+        if ($body === false || !preg_match('/\s2\d\d\s/', $statusLine)) {
+            throw new RuntimeException('GitHub konnte nicht abgefragt werden. cURL ist nicht verfügbar und URL-Zugriffe sind möglicherweise deaktiviert.');
+        }
+    }
+    $data = json_decode((string)$body, true);
+    if (!is_array($data)) throw new RuntimeException('GitHub hat keine gültige Antwort geliefert.');
+    return $data;
+}
+
+function latest_github_release(bool $force = false): array {
+    $cacheFile = dirname(__DIR__) . '/storage/github-release-cache.json';
+    if (!$force && is_file($cacheFile) && filemtime($cacheFile) > time() - 900) {
+        $cached = json_decode((string)file_get_contents($cacheFile), true);
+        if (is_array($cached)) return $cached;
+    }
+    $release = github_api_request('https://api.github.com/repos/' . APP_REPOSITORY . '/releases/latest');
+    if (!is_dir(dirname($cacheFile))) @mkdir(dirname($cacheFile), 0775, true);
+    @file_put_contents($cacheFile, json_encode($release, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+    return $release;
+}
+
+function normalized_version(string $version): string {
+    return ltrim(trim($version), "vV \t\n\r\0\x0B");
+}
+
+function release_update_available(array $release): bool {
+    $latest = normalized_version((string)($release['tag_name'] ?? '0.0.0'));
+    return $latest !== '' && version_compare($latest, APP_VERSION, '>');
+}
+
+function release_zip_asset(array $release): ?array {
+    $assets = is_array($release['assets'] ?? null) ? $release['assets'] : [];
+    foreach ($assets as $asset) {
+        $name = strtolower((string)($asset['name'] ?? ''));
+        if (str_ends_with($name, '.zip') && str_contains($name, 'album-share')) return $asset;
+    }
+    foreach ($assets as $asset) {
+        if (str_ends_with(strtolower((string)($asset['name'] ?? '')), '.zip')) return $asset;
+    }
+    return null;
+}
+
+function download_remote_file(string $url, string $target): void {
+    $out = fopen($target, 'wb');
+    if (!$out) throw new RuntimeException('Temporäre Updatedatei konnte nicht erstellt werden.');
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_FILE => $out, CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_CONNECTTIMEOUT => 15, CURLOPT_TIMEOUT => 300,
+            CURLOPT_HTTPHEADER => ['Accept: application/octet-stream', 'User-Agent: Music-Share-Updater/' . APP_VERSION],
+        ]);
+        $ok = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        fclose($out);
+        if (!$ok || $status < 200 || $status >= 300) {
+            @unlink($target);
+            throw new RuntimeException('Update-ZIP konnte nicht heruntergeladen werden' . ($error ? ': ' . $error : ' (HTTP ' . $status . ').'));
+        }
+    } else {
+        fclose($out);
+        $context = stream_context_create(['http' => ['timeout' => 300, 'header' => "User-Agent: Music-Share-Updater/" . APP_VERSION . "\r\n"]]);
+        if (!@copy($url, $target, $context)) throw new RuntimeException('Update-ZIP konnte nicht heruntergeladen werden.');
+    }
+    if (!is_file($target) || filesize($target) < 1000) throw new RuntimeException('Die heruntergeladene Updatedatei ist ungültig.');
+}
+
+function recursive_copy_update(string $source, string $destination, array $protectedTopLevel): void {
+    $items = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
+    foreach ($items as $item) {
+        $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($source) + 1));
+        $top = explode('/', $relative, 2)[0];
+        if (in_array($top, $protectedTopLevel, true)) continue;
+        $target = $destination . '/' . $relative;
+        if ($item->isDir()) {
+            if (!is_dir($target) && !mkdir($target, 0775, true) && !is_dir($target)) throw new RuntimeException('Verzeichnis konnte nicht erstellt werden: ' . $relative);
+        } else {
+            if (!is_dir(dirname($target))) mkdir(dirname($target), 0775, true);
+            if (!copy($item->getPathname(), $target)) throw new RuntimeException('Datei konnte nicht aktualisiert werden: ' . $relative);
+        }
+    }
+}
+
+function create_application_backup(string $root): string {
+    if (!class_exists(ZipArchive::class)) throw new RuntimeException('Für Updates wird die PHP-Erweiterung ZipArchive benötigt.');
+    $backupDir = $root . '/storage/backups';
+    if (!is_dir($backupDir) && !mkdir($backupDir, 0775, true) && !is_dir($backupDir)) throw new RuntimeException('Backup-Verzeichnis ist nicht beschreibbar.');
+    $file = $backupDir . '/before-update-' . APP_VERSION . '-' . date('Ymd-His') . '.zip';
+    $zip = new ZipArchive();
+    if ($zip->open($file, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) throw new RuntimeException('Backup konnte nicht erstellt werden.');
+    $skip = ['uploads', 'storage', '.git'];
+    $items = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
+    foreach ($items as $item) {
+        if (!$item->isFile()) continue;
+        $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($root) + 1));
+        if (in_array(explode('/', $relative, 2)[0], $skip, true)) continue;
+        $zip->addFile($item->getPathname(), $relative);
+    }
+    $zip->close();
+    return $file;
 }

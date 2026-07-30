@@ -93,3 +93,13 @@ Der HTTP-Header ist die maßgebliche Sperre, auch wenn eine konkrete URL bereits
 - Separater Freigabe-Button aus der Albumübersicht entfernt.
 - Angemeldete Benutzer können jedes Album direkt und ohne Freigabelink in der öffentlichen Darstellung ansehen.
 - Interne Vorschau unterstützt Streaming sowie Einzel- und Albumdownload und ist durch die Anmeldung geschützt.
+
+## GitHub-Updates
+
+Im Backend zeigt der Footer die installierte Version und verlinkt auf das Repository:
+`https://github.com/Wiwaltill/music-share`
+
+Administratoren können unter **Einstellungen → Updates** das neueste GitHub-Release prüfen und installieren.
+Damit die direkte Installation funktioniert, muss das Release eine vollständige ZIP-Datei der Anwendung als **Release Asset** enthalten. Der Dateiname sollte `album-share-app-vX.Y.Z.zip` lauten.
+
+Vor dem Update wird ein Backup der Programmdateien unter `storage/backups/` erstellt. `config.php`, `uploads/`, `storage/` und die Datenbank werden nicht überschrieben. Erforderliche PHP-Erweiterungen: cURL oder `allow_url_fopen`, außerdem ZipArchive.

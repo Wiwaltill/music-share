@@ -15,6 +15,7 @@ if (!is_file($configFile)) {
 }
 $config = require $configFile;
 date_default_timezone_set($config['app']['timezone'] ?? 'Europe/Berlin');
+require_once __DIR__ . '/version.php';
 require_once __DIR__ . '/functions.php';
 try {
     $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $config['db']['host'], $config['db']['port'], $config['db']['name'], $config['db']['charset'] ?? 'utf8mb4');
