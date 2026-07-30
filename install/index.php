@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+header('X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex', true);
 
 $root = dirname(__DIR__);
 
@@ -130,7 +131,7 @@ function e(string $value): string
 <html lang="de">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
     <title>Album Share installieren</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>

@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+header('X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex', true);
 session_start();
 $root = dirname(__DIR__);
 $configFile = $root . '/config.php';

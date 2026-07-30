@@ -88,6 +88,21 @@ function verify_csrf(): void {
 function flash(string $type, string $message): void { $_SESSION['flash'][] = compact('type','message'); }
 function get_flashes(): array { $f = $_SESSION['flash'] ?? []; unset($_SESSION['flash']); return $f; }
 function random_token(int $bytes = 24): string { return bin2hex(random_bytes($bytes)); }
+
+/** Creates a compact, URL-safe and database-unique share token. */
+function create_short_share_token(PDO $pdo, int $length = 10): string {
+    $alphabet = '23456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+    $max = strlen($alphabet) - 1;
+    do {
+        $token = '';
+        for ($i = 0; $i < $length; $i++) {
+            $token .= $alphabet[random_int(0, $max)];
+        }
+        $check = $pdo->prepare('SELECT 1 FROM shares WHERE token = ? LIMIT 1');
+        $check->execute([$token]);
+    } while ($check->fetchColumn());
+    return $token;
+}
 function slugify(string $value): string {
     $value = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value) ?: $value;
     $value = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '-', $value));

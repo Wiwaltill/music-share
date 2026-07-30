@@ -1,4 +1,14 @@
 Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^s/([A-Za-z0-9_-]+)/?$ share.php?token=$1 [L,QSA]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet, noimageindex"
+</IfModule>
+
 <FilesMatch "^(config\.php|config\.sample\.php)$">
   Require all denied
 </FilesMatch>

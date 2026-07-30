@@ -70,7 +70,26 @@ Seit Version 1.2 zeigt die Anwendung bei überschrittenem `post_max_size` eine v
 - MP3-Titel werden zuverlässig aus ID3v2.2, ID3v2.3, ID3v2.4 oder ID3v1 übernommen.
 - Aktualisierte jsmediatags-Einbindung und lokaler Fallback bei blockiertem CDN.
 
-## Änderungen in Version 1.10
+## Änderungen in Version 1.11
 
 - Aktive Titel zeigen ein Pause-Symbol; bei Pause wieder das Play-Symbol.
 - Kompakterer mobiler Plyr-Player mit Titelzeile oberhalb der Steuerung.
+
+
+## Kurzlinks und Suchmaschinen
+
+Neue Freigaben werden als kompakte URL im Format `/s/Ab3xK9pQ2m` ausgegeben. Bereits vorhandene lange Links über `share.php?token=...` bleiben gültig. Für Kurzlinks muss Apache `mod_rewrite` aktiviert sein und `.htaccess`-Dateien zulassen.
+
+Die gesamte Installation ist für Suchmaschinen gesperrt durch:
+
+- `robots.txt` mit `Disallow: /`
+- HTTP-Header `X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex`
+- zusätzliche Robots-Meta-Tags auf öffentlichen Seiten
+
+Der HTTP-Header ist die maßgebliche Sperre, auch wenn eine konkrete URL bereits bekannt ist.
+
+
+## Version 1.12
+- Separater Freigabe-Button aus der Albumübersicht entfernt.
+- Angemeldete Benutzer können jedes Album direkt und ohne Freigabelink in der öffentlichen Darstellung ansehen.
+- Interne Vorschau unterstützt Streaming sowie Einzel- und Albumdownload und ist durch die Anmeldung geschützt.
