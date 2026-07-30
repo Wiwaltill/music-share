@@ -26,3 +26,6 @@ try {
     http_response_code(500);
     exit('Datenbankverbindung fehlgeschlagen. Bitte Konfiguration prüfen.');
 }
+
+require_once __DIR__.'/migrations.php';
+run_migrations($pdo);
