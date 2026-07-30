@@ -56,7 +56,11 @@ Seit Version 1.2 zeigt die Anwendung bei überschrittenem `post_max_size` eine v
 - Öffentlicher Album-Download-Button als kontrastreicher Glas-Button
 - Bestehender erster Benutzer wird automatisch Administrator
 
-## Änderung in Version 1.7
+## Änderung in Version 1.8
 
 - Vorhandene Albumcover können in der Albumverwaltung mit Bestätigung gelöscht werden.
 - Beim Löschen wird auch die zugehörige Bilddatei aus dem Upload-Verzeichnis entfernt.
+
+
+## Version 1.8
+- Cover und Cover-Platzhalter in der Albumübersicht öffnen direkt die Albumverwaltung.
