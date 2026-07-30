@@ -56,11 +56,21 @@ Seit Version 1.2 zeigt die Anwendung bei überschrittenem `post_max_size` eine v
 - Öffentlicher Album-Download-Button als kontrastreicher Glas-Button
 - Bestehender erster Benutzer wird automatisch Administrator
 
-## Änderung in Version 1.8
+## Änderung in Version 1.9
 
 - Vorhandene Albumcover können in der Albumverwaltung mit Bestätigung gelöscht werden.
 - Beim Löschen wird auch die zugehörige Bilddatei aus dem Upload-Verzeichnis entfernt.
 
 
-## Version 1.8
+## Version 1.9
 - Cover und Cover-Platzhalter in der Albumübersicht öffnen direkt die Albumverwaltung.
+
+
+## Änderung in Version 1.9
+- MP3-Titel werden zuverlässig aus ID3v2.2, ID3v2.3, ID3v2.4 oder ID3v1 übernommen.
+- Aktualisierte jsmediatags-Einbindung und lokaler Fallback bei blockiertem CDN.
+
+## Änderungen in Version 1.10
+
+- Aktive Titel zeigen ein Pause-Symbol; bei Pause wieder das Play-Symbol.
+- Kompakterer mobiler Plyr-Player mit Titelzeile oberhalb der Steuerung.
