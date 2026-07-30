@@ -1,0 +1,3 @@
+<?php
+require_once __DIR__.'/../includes/bootstrap.php';require_login();header('Content-Type: application/json; charset=utf-8');
+try{verify_csrf();$albumId=(int)($_POST['album_id']??0);$items=json_decode($_POST['items']??'[]',true,512,JSON_THROW_ON_ERROR);$pdo->beginTransaction();$s=$pdo->prepare('UPDATE tracks SET title=?,disc_no=?,track_no=? WHERE id=? AND album_id=?');foreach($items as $i=>$item){$s->execute([trim((string)$item['title']),max(1,(int)$item['disc_no']),max(1,(int)$item['track_no']),(int)$item['id'],$albumId]);}$pdo->commit();echo json_encode(['ok'=>true]);}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(422);echo json_encode(['ok'=>false,'message'=>$e->getMessage()]);}
