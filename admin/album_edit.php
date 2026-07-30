@@ -4,6 +4,18 @@ require_login();
 $id=(int)($_GET['id']??0);
 $album=['title'=>'','artist'=>'','description'=>'','cover_file'=>null];
 if($id){$s=$pdo->prepare('SELECT * FROM albums WHERE id=?');$s->execute([$id]);$album=$s->fetch()?:$album;}
+if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'')==='remove_cover'){
+    verify_csrf();
+    if(!$id){flash('danger','Album nicht gefunden.');redirect('admin/index.php');}
+    $s=$pdo->prepare('SELECT cover_file FROM albums WHERE id=?');$s->execute([$id]);$coverFile=$s->fetchColumn();
+    $s=$pdo->prepare('UPDATE albums SET cover_file=NULL WHERE id=?');$s->execute([$id]);
+    if($coverFile){
+        $coverPath=dirname(__DIR__).'/uploads/covers/'.basename((string)$coverFile);
+        if(is_file($coverPath)){@unlink($coverPath);}
+    }
+    flash('success','Cover wurde gelöscht.');
+    redirect('admin/album_edit.php?id='.$id);
+}
 if($_SERVER['REQUEST_METHOD']==='POST' && ($_POST['action']??'save_album')==='save_album'){
     verify_csrf();
     try{
@@ -34,7 +46,7 @@ if($id){$s=$pdo->prepare('SELECT * FROM tracks WHERE album_id=? ORDER BY disc_no
 render_header($id?'Album verwalten':'Neues Album',true);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h2 mb-1"><?=$id?'Album verwalten':'Neues Album'?></h1><p class="text-body-secondary mb-0"><?=$id?'Metadaten, Titel und Freigaben an einem Ort.':'Zuerst Albumdaten und Cover anlegen.'?></p></div><a class="btn btn-outline-secondary" href="index.php">Zurück</a></div>
-<form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="save_album"><div class="row g-4"><div class="col-lg-8"><div class="card shadow-sm"><div class="card-body"><div class="row g-3"><div class="col-md-7"><label class="form-label">Albumtitel</label><input class="form-control" name="title" value="<?=e($album['title'])?>" required></div><div class="col-md-5"><label class="form-label">Interpret</label><input class="form-control" name="artist" value="<?=e($album['artist'])?>"></div><div class="col-12"><label class="form-label">Beschreibung</label><textarea class="form-control" name="description" rows="4"><?=e($album['description'])?></textarea></div></div></div></div></div><div class="col-lg-4"><div class="card shadow-sm"><div class="card-body"><label class="form-label">Cover</label><?php if($album['cover_file']):?><img class="album-cover mb-3" src="<?=base_url('uploads/covers/'.$album['cover_file'])?>" alt=""><?php endif?><input class="form-control" type="file" name="cover" accept="image/jpeg,image/png,image/webp"><button class="btn btn-primary w-100 mt-3"><?=$id?'Albumdaten speichern':'Album erstellen'?></button></div></div></div></div></form>
+<form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="save_album"><div class="row g-4"><div class="col-lg-8"><div class="card shadow-sm"><div class="card-body"><div class="row g-3"><div class="col-md-7"><label class="form-label">Albumtitel</label><input class="form-control" name="title" value="<?=e($album['title'])?>" required></div><div class="col-md-5"><label class="form-label">Interpret</label><input class="form-control" name="artist" value="<?=e($album['artist'])?>"></div><div class="col-12"><label class="form-label">Beschreibung</label><textarea class="form-control" name="description" rows="4"><?=e($album['description'])?></textarea></div></div></div></div></div><div class="col-lg-4"><div class="card shadow-sm"><div class="card-body"><label class="form-label">Cover</label><?php if($album['cover_file']):?><img class="album-cover mb-3" src="<?=base_url('uploads/covers/'.$album['cover_file'])?>" alt="Albumcover"><div class="d-grid mb-3"><button class="btn btn-outline-danger" type="submit" name="action" value="remove_cover" formnovalidate onclick="return confirm('Cover wirklich löschen?')">Cover löschen</button></div><?php endif?><input class="form-control" type="file" name="cover" accept="image/jpeg,image/png,image/webp"><button class="btn btn-primary w-100 mt-3" type="submit" name="action" value="save_album"><?=$id?'Albumdaten speichern':'Album erstellen'?></button></div></div></div></div></form>
 <?php if($id):?>
 <div class="card shadow-sm mt-4" id="upload"><div class="card-header d-flex justify-content-between align-items-center"><div><span class="fw-semibold">Titel hochladen</span><span class="badge text-bg-secondary ms-2"><?=count($tracks)?></span></div><button class="btn btn-sm btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#trackUploadPanel" aria-expanded="false" aria-controls="trackUploadPanel">Neue Titel hochladen</button></div><div id="trackUploadPanel" class="collapse"><div class="card-body">
 <div id="uploadDropzone" class="upload-dropzone text-center p-4"><div class="fs-1">⇧</div><h2 class="h5">Audiodateien hier ablegen</h2><p class="text-body-secondary mb-3">Dateien werden vor dem Upload mit Name, Größe und erkannten MP3-Tags angezeigt.</p><input id="trackFiles" type="file" accept="audio/*,.flac" multiple hidden><button type="button" class="btn btn-primary" id="chooseTracks">Dateien auswählen</button></div>
