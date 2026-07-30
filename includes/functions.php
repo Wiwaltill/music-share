@@ -17,6 +17,40 @@ function base_url(string $path = ''): string {
 function redirect(string $path): never { header('Location: ' . base_url($path)); exit; }
 function is_logged_in(): bool { return !empty($_SESSION['user_id']); }
 function require_login(): void { if (!is_logged_in()) redirect('admin/login.php'); }
+function current_user(): ?array {
+    global $pdo;
+    if (!is_logged_in()) return null;
+    static $user = null;
+    if ($user === null) {
+        $stmt = $pdo->prepare('SELECT id,username,display_name,role,is_active FROM users WHERE id=?');
+        $stmt->execute([(int)$_SESSION['user_id']]);
+        $user = $stmt->fetch() ?: false;
+        if (!$user || !(int)$user['is_active']) { unset($_SESSION['user_id']); return null; }
+    }
+    return $user ?: null;
+}
+function is_admin(): bool { return (current_user()['role'] ?? '') === 'admin'; }
+function require_admin(): void { require_login(); if (!is_admin()) { http_response_code(403); exit('Keine Berechtigung.'); } }
+function get_setting(string $key, ?string $default = null): ?string {
+    global $pdo;
+    static $cache = [];
+    if (array_key_exists($key, $cache)) return $cache[$key];
+    try {
+        $stmt = $pdo->prepare('SELECT setting_value FROM settings WHERE setting_key=?');
+        $stmt->execute([$key]);
+        $value = $stmt->fetchColumn();
+        return $cache[$key] = ($value === false ? $default : (string)$value);
+    } catch (Throwable $e) { return $default; }
+}
+function set_setting(string $key, string $value): void {
+    global $pdo;
+    $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value) VALUES(?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
+    $stmt->execute([$key,$value]);
+}
+function app_name(): string {
+    global $config;
+    return trim((string)get_setting('site_name', (string)($config['app']['name'] ?? 'Album Share'))) ?: 'Album Share';
+}
 function csrf_token(): string { if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32)); return $_SESSION['csrf']; }
 function ini_bytes(string $value): int {
     $value = trim($value);
@@ -86,11 +120,15 @@ function upload_file(array $file, string $targetDir, array $allowedMime, int $ma
 }
 function render_header(string $title, bool $admin = false): void {
     global $config;
-    $app = e($config['app']['name'] ?? 'Album Share');
+    $app = e(app_name());
     $flashes = get_flashes();
     echo '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="'.base_url('assets/css/app.css').'"></head><body class="bg-body-tertiary">';
     echo '<nav class="navbar navbar-expand-lg bg-dark navbar-dark"><div class="container"><a class="navbar-brand fw-semibold" href="'.base_url($admin?'admin/index.php':'').'">'.$app.'</a>';
-    if ($admin && is_logged_in()) echo '<div class="ms-auto d-flex gap-2"><a class="btn btn-sm btn-outline-light" href="'.base_url('admin/index.php').'">Alben</a><a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'">Abmelden</a></div>';
+    if ($admin && is_logged_in()) {
+        echo '<div class="ms-auto d-flex gap-2"><a class="btn btn-sm btn-outline-light" href="'.base_url('admin/index.php').'">Alben</a>';
+        if (is_admin()) echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/settings.php').'">Einstellungen</a>';
+        echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'">Abmelden</a></div>';
+    }
     echo '</div></nav><main class="container py-4">';
     foreach ($flashes as $f) echo '<div class="alert alert-'.e($f['type']).'">'.e($f['message']).'</div>';
 }
