@@ -115,3 +115,10 @@ Vor dem Update wird ein Backup der Programmdateien unter `storage/backups/` erst
 ## Version 1.16.0
 
 - Dezente GitHub-Signatur „Music Share · Open Source“ auf der öffentlichen Albumansicht.
+
+## Version 1.17
+- Cover-Zoom in der öffentlichen Albumansicht
+- optionale Cover-Farbakzente unter Einstellungen
+- Albuminformationen: Erscheinungsjahr, Genre, Label und Copyright
+- Backend-Darstellung Auto/Hell/Dunkel, lokal pro Browser gespeichert
+- Updater mit Release-Changelog, Backupübersicht und Rollback

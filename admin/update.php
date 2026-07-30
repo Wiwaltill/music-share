@@ -10,7 +10,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = (string)($_POST['action'] ?? '');
     try {
-        if ($action === 'check') {
+        if ($action === 'rollback') {
+            $backupName = basename((string)($_POST['backup'] ?? ''));
+            create_application_backup($root);
+            restore_application_backup($root, $backupName);
+            flash('success', 'Backup wurde wiederhergestellt. Vorher wurde eine zusätzliche Sicherung erstellt.');
+            redirect('admin/update.php');
+        } elseif ($action === 'check') {
             $release = latest_github_release(true);
         } elseif ($action === 'install') {
             $release = latest_github_release(true);
@@ -58,6 +64,7 @@ render_header('Updates', true);
 $latest = normalized_version((string)($release['tag_name'] ?? ''));
 $available = $release ? release_update_available($release) : false;
 $asset = $release ? release_zip_asset($release) : null;
+$backups = application_backups($root);
 ?>
 <div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1">Updates</h1><p class="text-body-secondary mb-0">Neue Versionen direkt aus den GitHub-Releases installieren.</p></div></div>
 <?php if ($error): ?><div class="alert alert-danger"><?=e($error)?></div><?php endif; ?>
@@ -69,7 +76,7 @@ $asset = $release ? release_zip_asset($release) : null;
       <hr>
       <?php if ($release): ?>
         <div class="text-body-secondary small">Neuestes GitHub-Release</div><div class="fs-4 fw-semibold"><?=e($latest ?: 'Unbekannt')?></div>
-        <?php if (!empty($release['name'])): ?><div class="mt-1"><?=e((string)$release['name'])?></div><?php endif; ?>
+        <?php if (!empty($release['name'])): ?><div class="mt-1"><?=e((string)$release['name'])?></div><?php endif; ?><?php if (!empty($release['body'])): ?><details class="mt-3"><summary class="fw-semibold">Changelog anzeigen</summary><div class="release-notes mt-2 p-3 rounded bg-body-tertiary"><?=nl2br(e((string)$release['body']))?></div></details><?php endif; ?>
         <?php if ($available): ?>
           <div class="alert alert-success mt-3 mb-3">Eine neue Version ist verfügbar.</div>
           <?php if ($asset): ?>
@@ -81,4 +88,5 @@ $asset = $release ? release_zip_asset($release) : null;
   </div>
   <div class="col-lg-5"><div class="card shadow-sm"><div class="card-body p-4"><h2 class="h5">Update-Schutz</h2><p class="mb-2">Vor jeder Installation wird ein Backup der Programmdateien unter <code>storage/backups/</code> angelegt.</p><p class="mb-0"><code>config.php</code>, <code>uploads/</code> und <code>storage/</code> werden durch Updates nicht überschrieben.</p></div></div></div>
 </div>
+<div class="card shadow-sm mt-4"><div class="card-body p-4"><h2 class="h5">Backups und Rollback</h2><p class="text-body-secondary">Vor Updates und Wiederherstellungen wird automatisch gesichert.</p><div class="list-group"><?php foreach($backups as $backup):?><div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2"><div><div class="fw-semibold"><?=e(basename($backup))?></div><div class="small text-body-secondary"><?=date('d.m.Y H:i',filemtime($backup))?> · <?=format_bytes((int)filesize($backup))?></div></div><form method="post" onsubmit="return confirm('Dieses Backup wiederherstellen? Aktuelle Programmdateien werden vorher zusätzlich gesichert.')"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="rollback"><input type="hidden" name="backup" value="<?=e(basename($backup))?>"><button class="btn btn-sm btn-outline-warning">Wiederherstellen</button></form></div><?php endforeach?><?php if(!$backups):?><div class="text-body-secondary">Noch keine Backups vorhanden.</div><?php endif?></div></div></div>
 <?php render_footer();

@@ -163,10 +163,10 @@ function render_header(string $title, bool $admin = false): void {
     global $config;
     $app = e(app_name());
     $flashes = get_flashes();
-    echo '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="'.base_url('assets/css/app.css').'"></head><body class="bg-body-tertiary">';
+    echo '<!doctype html><html lang="de"><head><script>(function(){var t=localStorage.getItem(\"musicshare-theme\")||\"auto\";var d=t===\"auto\"?(matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\"):t;document.documentElement.setAttribute(\"data-bs-theme\",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="'.base_url('assets/css/app.css').'"></head><body class="bg-body-tertiary">';
     echo '<nav class="navbar navbar-expand-lg bg-dark navbar-dark"><div class="container"><a class="navbar-brand fw-semibold" href="'.base_url($admin?'admin/index.php':'').'">'.$app.'</a>';
     if ($admin && is_logged_in()) {
-        echo '<div class="ms-auto d-flex gap-2"><a class="btn btn-sm btn-outline-light" href="'.base_url('admin/index.php').'">Alben</a>';
+        echo '<div class="ms-auto d-flex gap-2 align-items-center"><button class="btn btn-sm btn-outline-light" type="button" id="themeToggle" title="Darstellung wechseln">◐</button><a class="btn btn-sm btn-outline-light" href="'.base_url('admin/index.php').'">Alben</a>';
         if (is_admin()) echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/settings.php').'">Einstellungen</a>';
         echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'">Abmelden</a></div>';
     }
@@ -181,7 +181,7 @@ function render_footer(): void {
         if (is_logged_in() && is_admin()) echo ' · <a class="text-body-secondary" href="' . base_url('admin/update.php') . '">Nach Updates suchen</a>';
         echo '</span></div></footer>';
     }
-    echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="'.base_url('assets/js/player.js').'"></script></body></html>';
+    echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="'.base_url('assets/js/theme.js').'"></script><script src="'.base_url('assets/js/player.js').'"></script></body></html>';
 }
 
 function share_access_granted(array $share): bool {
@@ -326,4 +326,24 @@ function create_application_backup(string $root): string {
     }
     $zip->close();
     return $file;
+}
+
+
+function restore_application_backup(string $root, string $backupName): void {
+    if (!class_exists(ZipArchive::class)) throw new RuntimeException('ZipArchive ist nicht verfügbar.');
+    $safe = basename($backupName);
+    $file = $root . '/storage/backups/' . $safe;
+    if (!is_file($file) || !str_ends_with(strtolower($safe), '.zip')) throw new RuntimeException('Backup wurde nicht gefunden.');
+    $zip = new ZipArchive();
+    if ($zip->open($file) !== true) throw new RuntimeException('Backup konnte nicht geöffnet werden.');
+    $tmp = $root . '/storage/restore-' . bin2hex(random_bytes(5));
+    if (!mkdir($tmp, 0775, true) || !$zip->extractTo($tmp)) throw new RuntimeException('Backup konnte nicht entpackt werden.');
+    $zip->close();
+    recursive_copy_update($tmp, $root, ['config.php','uploads','storage','.git']);
+}
+
+function application_backups(string $root): array {
+    $files = glob($root . '/storage/backups/*.zip') ?: [];
+    usort($files, fn($a,$b) => filemtime($b) <=> filemtime($a));
+    return $files;
 }

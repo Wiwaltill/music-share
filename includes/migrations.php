@@ -30,6 +30,14 @@ function run_migrations(PDO $pdo): void {
             $firstUser = (int)$pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
             if ($firstUser > 0) $pdo->exec("UPDATE albums SET owner_user_id=" . $firstUser . " WHERE owner_user_id IS NULL");
         }
+        foreach ([
+            'release_year' => "INT UNSIGNED NULL AFTER artist",
+            'genre' => "VARCHAR(150) NOT NULL DEFAULT '' AFTER release_year",
+            'label_name' => "VARCHAR(180) NOT NULL DEFAULT '' AFTER genre",
+            'copyright_text' => "VARCHAR(255) NOT NULL DEFAULT '' AFTER label_name"
+        ] as $column => $definition) {
+            if (!in_array($column, $albumCols, true)) $pdo->exec("ALTER TABLE albums ADD COLUMN {$column} {$definition}");
+        }
         $pdo->exec("CREATE TABLE IF NOT EXISTS album_collaborators (
             album_id INT UNSIGNED NOT NULL,
             user_id INT UNSIGNED NOT NULL,

@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $siteName = trim((string)($_POST['site_name'] ?? ''));
         if ($siteName === '') $siteName = 'Album Share';
         set_setting('site_name', mb_substr($siteName, 0, 120));
+        set_setting('album_colors_enabled', isset($_POST['album_colors_enabled']) ? '1' : '0');
         flash('success', 'Seiteneinstellungen gespeichert.');
         redirect('admin/settings.php');
     }
@@ -83,7 +84,7 @@ render_header('Einstellungen', true);
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="site">
         <label class="form-label" for="site_name">Site Name</label>
         <input class="form-control" id="site_name" name="site_name" maxlength="120" value="<?=e(app_name())?>" required>
-        <div class="form-text">Wird im Backend, im Seitentitel und in der Navigation verwendet.</div>
+        <div class="form-text">Wird im Backend, im Seitentitel und in der Navigation verwendet.</div><div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" role="switch" id="album_colors_enabled" name="album_colors_enabled" <?=get_setting('album_colors_enabled','0')==='1'?'checked':''?>> <label class="form-check-label" for="album_colors_enabled">Albumfarben aus dem Cover auf öffentlichen Seiten verwenden</label></div><div class="form-text">Ist die Funktion deaktiviert, wird die neutrale Glasdarstellung verwendet.</div>
         <button class="btn btn-primary mt-3">Speichern</button>
       </form>
     </div></div>
