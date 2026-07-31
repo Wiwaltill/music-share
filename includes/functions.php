@@ -165,15 +165,22 @@ function render_header(string $title, bool $admin = false): void {
         header('Pragma: no-cache');
         header('Expires: 0');
     }
-    global $config;
     $app = e(app_name());
     $flashes = get_flashes();
-    echo '<!doctype html><html lang="de"><head><script>(function(){var t=localStorage.getItem(\"musicshare-theme\")||\"auto\";var d=t===\"auto\"?(matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\"):t;document.documentElement.setAttribute(\"data-bs-theme\",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="'.base_url('assets/css/app.css?v=' . rawurlencode(APP_VERSION)).'"></head><body class="bg-body-tertiary">';
-    echo '<nav class="navbar navbar-expand-lg bg-dark navbar-dark"><div class="container"><a class="navbar-brand fw-semibold" href="'.base_url($admin?'admin/index.php':'').'">'.$app.'</a>';
+    $searchValue = e(trim((string)($_GET['q'] ?? '')));
+    echo '<!doctype html><html lang="de"><head><script>(function(){var t=localStorage.getItem("musicshare-theme")||"auto";var d=t==="auto"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-bs-theme",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="'.base_url('assets/css/app.css?v=' . rawurlencode(APP_VERSION)).'"></head><body class="bg-body-tertiary">';
+    echo '<nav class="navbar navbar-expand-lg bg-dark navbar-dark admin-navbar"><div class="container">';
+    echo '<a class="navbar-brand d-flex align-items-center gap-3 me-lg-5" href="'.base_url($admin?'admin/index.php':'').'"><span class="brand-mark"><i class="bi bi-music-note-beamed"></i></span><span class="brand-copy"><span class="brand-title">'.$app.'</span><span class="brand-subtitle">Open Source Album Manager</span></span></a>';
     if ($admin && is_logged_in()) {
-        echo '<div class="ms-auto d-flex gap-2 align-items-center"><button class="btn btn-sm btn-outline-light" type="button" id="themeToggle" title="Darstellung wechseln">◐</button><a class="btn btn-sm btn-outline-light" href="'.base_url('admin/index.php').'">Alben</a>';
-        if (is_admin()) echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/settings.php').'">Einstellungen</a>';
-        echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'">Abmelden</a></div>';
+        echo '<button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar" aria-expanded="false" aria-label="Navigation öffnen"><span class="navbar-toggler-icon"></span></button>';
+        echo '<div class="collapse navbar-collapse" id="adminNavbar">';
+        echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" value="'.$searchValue.'" placeholder="Alben durchsuchen …" aria-label="Alben durchsuchen"></div></form>';
+        echo '<div class="navbar-nav align-items-lg-center gap-lg-2 ms-lg-4">';
+        echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>Alben</a>';
+        if (is_admin()) echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>Einstellungen</a>';
+        echo '<div class="dropdown"><button class="btn btn-sm btn-outline-light dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-circle-half me-2"></i>Erscheinungsbild</button><ul class="dropdown-menu dropdown-menu-end theme-menu"><li><button class="dropdown-item theme-option" type="button" data-theme="auto"><i class="bi bi-display me-2"></i>System<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="light"><i class="bi bi-sun me-2"></i>Hell<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="dark"><i class="bi bi-moon-stars me-2"></i>Dunkel<span class="theme-check ms-auto"></span></button></li></ul></div>';
+        echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'"><i class="bi bi-box-arrow-right me-2"></i>Abmelden</a>';
+        echo '</div></div>';
     }
     echo '</div></nav><main class="container py-4">';
     foreach ($flashes as $f) echo '<div class="alert alert-'.e($f['type']).'">'.e($f['message']).'</div>';
@@ -182,13 +189,13 @@ function render_footer(): void {
     echo '</main>';
     if (is_admin_request()) {
         echo '<footer class="border-top bg-body py-3 mt-auto"><div class="container d-flex flex-wrap justify-content-between gap-2 small text-body-secondary">';
-        echo '<span>Version ' . e(APP_VERSION) . '</span><span><a class="text-body-secondary" href="' . e(APP_GITHUB_URL) . '" target="_blank" rel="noopener noreferrer">GitHub</a>';
-        if (is_logged_in() && is_admin()) echo ' · <a class="text-body-secondary" href="' . base_url('admin/update.php') . '">Nach Updates suchen</a>';
+        echo '<span>Version ' . e(APP_VERSION) . '</span><span><a class="text-body-secondary" href="' . e(APP_GITHUB_URL) . '" target="_blank" rel="noopener noreferrer"><i class="bi bi-github me-1"></i>GitHub</a>';
+        if (is_logged_in() && is_admin()) echo ' · <a class="text-body-secondary" href="' . base_url('admin/update.php') . '"><i class="bi bi-arrow-up-circle me-1"></i>Nach Updates suchen</a>';
         echo '</span></div></footer>';
     }
     echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>';
-    echo '<script>(function(){var k="musicshare-theme",m=["auto","light","dark"],q=window.matchMedia("(prefers-color-scheme: dark)");function a(v){var x=v==="auto"?(q.matches?"dark":"light"):v;document.documentElement.setAttribute("data-bs-theme",x);localStorage.setItem(k,v);var b=document.getElementById("themeToggle");if(b){b.textContent=v==="light"?"☀":v==="dark"?"☾":"◐";b.title="Darstellung: "+(v==="light"?"Hell":v==="dark"?"Dunkel":"Automatisch");}}var v=localStorage.getItem(k);if(m.indexOf(v)<0)v="auto";a(v);var b=document.getElementById("themeToggle");if(b)b.addEventListener("click",function(){v=m[(m.indexOf(v)+1)%m.length];a(v);});if(q.addEventListener)q.addEventListener("change",function(){if(v==="auto")a(v);});})();</script>';
-    echo '<script src="'.base_url('assets/js/player.js?v=' . rawurlencode(APP_VERSION) . '-' . time()).'"></script></body></html>';
+    echo '<script src="'.base_url('assets/js/theme.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
+    echo '<script src="'.base_url('assets/js/player.js?v=' . rawurlencode(APP_VERSION)).'"></script></body></html>';
 }
 
 function share_access_granted(array $share): bool {

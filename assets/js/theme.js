@@ -1,44 +1,34 @@
 (() => {
   'use strict';
-  const storageKey = 'musicshare-theme';
-  const modes = ['auto', 'light', 'dark'];
-  const labels = { auto: 'Automatisch', light: 'Hell', dark: 'Dunkel' };
-  const icons = { auto: '◐', light: '☀', dark: '☾' };
+  const key = 'musicshare-theme';
+  const allowed = ['auto', 'light', 'dark'];
   const media = window.matchMedia('(prefers-color-scheme: dark)');
+  let mode = allowed.includes(localStorage.getItem(key)) ? localStorage.getItem(key) : 'auto';
 
-  function currentMode() {
-    const saved = localStorage.getItem(storageKey);
-    return modes.includes(saved) ? saved : 'auto';
-  }
-
-  function apply(mode) {
+  function apply(next) {
+    mode = allowed.includes(next) ? next : 'auto';
     const actual = mode === 'auto' ? (media.matches ? 'dark' : 'light') : mode;
     document.documentElement.setAttribute('data-bs-theme', actual);
     document.documentElement.dataset.themePreference = mode;
-    localStorage.setItem(storageKey, mode);
-    const button = document.getElementById('themeToggle');
-    if (button) {
-      button.textContent = icons[mode];
-      button.title = 'Darstellung: ' + labels[mode];
-      button.setAttribute('aria-label', 'Darstellung: ' + labels[mode]);
-    }
+    localStorage.setItem(key, mode);
+    document.querySelectorAll('.theme-option').forEach((button) => {
+      const active = button.dataset.theme === mode;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      const check = button.querySelector('.theme-check');
+      if (check) check.innerHTML = active ? '<i class="bi bi-check2"></i>' : '';
+    });
   }
 
   function init() {
-    let mode = currentMode();
     apply(mode);
-    const button = document.getElementById('themeToggle');
-    if (button) {
-      button.addEventListener('click', () => {
-        mode = modes[(modes.indexOf(mode) + 1) % modes.length];
-        apply(mode);
-      });
-    }
-    const onChange = () => { if (mode === 'auto') apply(mode); };
-    if (typeof media.addEventListener === 'function') media.addEventListener('change', onChange);
-    else if (typeof media.addListener === 'function') media.addListener(onChange);
+    document.querySelectorAll('.theme-option').forEach((button) => {
+      button.addEventListener('click', () => apply(button.dataset.theme));
+    });
+    const refreshAuto = () => { if (mode === 'auto') apply(mode); };
+    if (typeof media.addEventListener === 'function') media.addEventListener('change', refreshAuto);
+    else if (typeof media.addListener === 'function') media.addListener(refreshAuto);
   }
-
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
   else init();
 })();
