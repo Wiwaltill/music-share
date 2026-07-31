@@ -604,3 +604,142 @@ function stored_backup_type(string $file): string {
         return 'application';
     }
 }
+
+function migration_backup_directory(string $root): string {
+    return $root . '/storage/migration-backups';
+}
+
+function migration_backups(string $root): array {
+    $dir = migration_backup_directory($root);
+    $files = glob($dir . '/music-share-migration-*.zip') ?: [];
+    usort($files, fn($a, $b) => filemtime($b) <=> filemtime($a));
+    return $files;
+}
+
+function sql_identifier(string $name): string {
+    return '`' . str_replace('`', '``', $name) . '`';
+}
+
+function create_database_dump(PDO $pdo, string $target): void {
+    $handle = fopen($target, 'wb');
+    if (!$handle) throw new RuntimeException('Temporäre Datenbanksicherung konnte nicht erstellt werden.');
+    fwrite($handle, "-- Music Share migration backup\nSET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\n\n");
+    $tables = $pdo->query('SHOW FULL TABLES WHERE Table_type = \'BASE TABLE\'')->fetchAll(PDO::FETCH_NUM);
+    foreach ($tables as $row) {
+        $table = (string)$row[0];
+        $quoted = sql_identifier($table);
+        $createRow = $pdo->query('SHOW CREATE TABLE ' . $quoted)->fetch(PDO::FETCH_NUM);
+        if (!$createRow || empty($createRow[1])) continue;
+        fwrite($handle, "DROP TABLE IF EXISTS {$quoted};\n" . $createRow[1] . ";\n\n");
+        $stmt = $pdo->query('SELECT * FROM ' . $quoted);
+        while ($data = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $columns = array_map('sql_identifier', array_keys($data));
+            $values = [];
+            foreach ($data as $value) {
+                if ($value === null) $values[] = 'NULL';
+                elseif (is_int($value) || is_float($value)) $values[] = (string)$value;
+                else $values[] = $pdo->quote((string)$value);
+            }
+            fwrite($handle, 'INSERT INTO ' . $quoted . ' (' . implode(',', $columns) . ') VALUES (' . implode(',', $values) . ");\n");
+        }
+        fwrite($handle, "\n");
+    }
+    fwrite($handle, "SET FOREIGN_KEY_CHECKS=1;\n");
+    fclose($handle);
+}
+
+function add_directory_to_zip(ZipArchive $zip, string $source, string $zipPrefix): void {
+    if (!is_dir($source)) return;
+    $source = rtrim($source, '/\\');
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::SELF_FIRST);
+    foreach ($iterator as $item) {
+        $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($source) + 1));
+        $inside = trim($zipPrefix . '/' . $relative, '/');
+        if ($item->isDir()) $zip->addEmptyDir($inside);
+        elseif ($item->isFile()) $zip->addFile($item->getPathname(), $inside);
+    }
+}
+
+function create_migration_backup(string $root, PDO $pdo): string {
+    if (!class_exists(ZipArchive::class)) throw new RuntimeException('Für Migrationsbackups wird ZipArchive benötigt.');
+    $dir = migration_backup_directory($root);
+    if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) throw new RuntimeException('Das Verzeichnis für Migrationsbackups ist nicht beschreibbar.');
+    $stamp = date('Ymd-His');
+    $target = $dir . '/music-share-migration-' . $stamp . '.zip';
+    $sqlFile = $dir . '/.database-' . bin2hex(random_bytes(5)) . '.sql';
+    create_database_dump($pdo, $sqlFile);
+    $manifest = [
+        'format' => 'music-share-migration',
+        'format_version' => 1,
+        'app_version' => APP_VERSION,
+        'created_at' => date(DATE_ATOM),
+        'includes' => ['database', 'uploads'],
+    ];
+    $zip = new ZipArchive();
+    if ($zip->open($target, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        @unlink($sqlFile);
+        throw new RuntimeException('Migrationsbackup konnte nicht erstellt werden.');
+    }
+    $zip->addFromString('manifest.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $zip->addFile($sqlFile, 'database.sql');
+    add_directory_to_zip($zip, $root . '/uploads', 'uploads');
+    $zip->close();
+    @unlink($sqlFile);
+    return $target;
+}
+
+function validate_migration_backup(string $file): array {
+    if (!class_exists(ZipArchive::class)) throw new RuntimeException('ZipArchive ist nicht verfügbar.');
+    if (!is_file($file)) throw new RuntimeException('Migrationsbackup wurde nicht gefunden.');
+    $zip = new ZipArchive();
+    if ($zip->open($file) !== true) throw new RuntimeException('Die hochgeladene Datei ist kein gültiges ZIP-Archiv.');
+    $manifestRaw = $zip->getFromName('manifest.json');
+    $hasSql = $zip->locateName('database.sql') !== false;
+    $manifest = is_string($manifestRaw) ? json_decode($manifestRaw, true) : null;
+    $zip->close();
+    if (!is_array($manifest) || ($manifest['format'] ?? '') !== 'music-share-migration' || !$hasSql) {
+        throw new RuntimeException('Die Datei ist kein gültiges Music-Share-Migrationsbackup.');
+    }
+    return $manifest;
+}
+
+function safe_extract_zip(ZipArchive $zip, string $destination): void {
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = str_replace('\\', '/', (string)$zip->getNameIndex($i));
+        if ($name === '' || str_starts_with($name, '/') || preg_match('#(^|/)\.\.(/|$)#', $name)) {
+            throw new RuntimeException('Das Backup enthält einen unsicheren Dateipfad.');
+        }
+    }
+    if (!$zip->extractTo($destination)) throw new RuntimeException('Migrationsbackup konnte nicht entpackt werden.');
+}
+
+function execute_sql_dump(PDO $pdo, string $sqlFile): void {
+    $sql = file_get_contents($sqlFile);
+    if ($sql === false) throw new RuntimeException('Datenbanksicherung konnte nicht gelesen werden.');
+    $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
+    try {
+        $pdo->exec($sql);
+    } finally {
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
+    }
+}
+
+function restore_migration_backup(string $root, PDO $pdo, string $file): void {
+    validate_migration_backup($file);
+    $tmp = $root . '/storage/migration-restore-' . bin2hex(random_bytes(6));
+    if (!mkdir($tmp, 0775, true) && !is_dir($tmp)) throw new RuntimeException('Temporäres Wiederherstellungsverzeichnis konnte nicht erstellt werden.');
+    $zip = new ZipArchive();
+    if ($zip->open($file) !== true) throw new RuntimeException('Migrationsbackup konnte nicht geöffnet werden.');
+    try { safe_extract_zip($zip, $tmp); } finally { $zip->close(); }
+    if (!is_file($tmp . '/database.sql')) throw new RuntimeException('Datenbanksicherung fehlt im Backup.');
+    create_migration_backup($root, $pdo);
+    execute_sql_dump($pdo, $tmp . '/database.sql');
+    $uploadsSource = $tmp . '/uploads';
+    if (is_dir($uploadsSource)) {
+        $uploadsTarget = $root . '/uploads';
+        if (is_dir($uploadsTarget)) remove_directory_tree($uploadsTarget);
+        if (!mkdir($uploadsTarget, 0775, true) && !is_dir($uploadsTarget)) throw new RuntimeException('Upload-Verzeichnis konnte nicht neu erstellt werden.');
+        recursive_copy_update($uploadsSource, $uploadsTarget, []);
+    }
+    remove_directory_tree($tmp);
+}
