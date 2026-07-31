@@ -10,7 +10,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = (string)($_POST['action'] ?? '');
     try {
-        if ($action === 'rollback') {
+        if ($action === 'delete_backup') {
+            $backupName = basename((string)($_POST['backup'] ?? ''));
+            $backupPath = $root . '/storage/backups/' . $backupName;
+            if ($backupName === '' || !is_file($backupPath) || !in_array($backupPath, application_backups($root), true)) {
+                throw new RuntimeException('Backup wurde nicht gefunden.');
+            }
+            if (!@unlink($backupPath)) {
+                throw new RuntimeException('Backup konnte nicht vom Server gelöscht werden.');
+            }
+            flash('success', 'Backup wurde gelöscht.');
+            redirect('admin/update.php');
+        } elseif ($action === 'rollback') {
             $backupName = basename((string)($_POST['backup'] ?? ''));
             create_application_backup($root);
             restore_application_backup($root, $backupName);
@@ -88,5 +99,5 @@ $backups = application_backups($root);
   </div>
   <div class="col-lg-5"><div class="card shadow-sm"><div class="card-body p-4"><h2 class="h5">Update-Schutz</h2><p class="mb-2">Vor jeder Installation wird ein Backup der Programmdateien unter <code>storage/backups/</code> angelegt.</p><p class="mb-0"><code>config.php</code>, <code>uploads/</code> und <code>storage/</code> werden durch Updates nicht überschrieben.</p></div></div></div>
 </div>
-<div class="card shadow-sm mt-4"><div class="card-body p-4"><h2 class="h5">Backups und Rollback</h2><p class="text-body-secondary">Vor Updates und Wiederherstellungen wird automatisch gesichert.</p><div class="list-group"><?php foreach($backups as $backup):?><div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2"><div><div class="fw-semibold"><?=e(basename($backup))?></div><div class="small text-body-secondary"><?=date('d.m.Y H:i',filemtime($backup))?> · <?=format_bytes((int)filesize($backup))?></div></div><form method="post" onsubmit="return confirm('Dieses Backup wiederherstellen? Aktuelle Programmdateien werden vorher zusätzlich gesichert.')"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="rollback"><input type="hidden" name="backup" value="<?=e(basename($backup))?>"><button class="btn btn-sm btn-outline-warning">Wiederherstellen</button></form></div><?php endforeach?><?php if(!$backups):?><div class="text-body-secondary">Noch keine Backups vorhanden.</div><?php endif?></div></div></div>
+<div class="card shadow-sm mt-4"><div class="card-body p-4"><h2 class="h5">Backups und Rollback</h2><p class="text-body-secondary">Vor Updates und Wiederherstellungen wird automatisch gesichert.</p><div class="list-group"><?php foreach($backups as $backup):?><div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2"><div><div class="fw-semibold"><?=e(basename($backup))?></div><div class="small text-body-secondary"><?=date('d.m.Y H:i',filemtime($backup))?> · <?=format_bytes((int)filesize($backup))?></div></div><div class="d-flex gap-2"><form method="post" onsubmit="return confirm('Dieses Backup wiederherstellen? Aktuelle Programmdateien werden vorher zusätzlich gesichert.')"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="rollback"><input type="hidden" name="backup" value="<?=e(basename($backup))?>"><button class="btn btn-sm btn-outline-warning">Wiederherstellen</button></form><form method="post" onsubmit="return confirm('Dieses Backup endgültig vom Server löschen?')"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="delete_backup"><input type="hidden" name="backup" value="<?=e(basename($backup))?>"><button class="btn btn-sm btn-outline-danger" title="Backup löschen" aria-label="Backup löschen"><span aria-hidden="true">🗑</span></button></form></div></div><?php endforeach?><?php if(!$backups):?><div class="text-body-secondary">Noch keine Backups vorhanden.</div><?php endif?></div></div></div>
 <?php render_footer();

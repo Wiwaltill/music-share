@@ -160,10 +160,15 @@ function upload_file(array $file, string $targetDir, array $allowedMime, int $ma
     return $name;
 }
 function render_header(string $title, bool $admin = false): void {
+    if (!headers_sent()) {
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+    }
     global $config;
     $app = e(app_name());
     $flashes = get_flashes();
-    echo '<!doctype html><html lang="de"><head><script>(function(){var t=localStorage.getItem(\"musicshare-theme\")||\"auto\";var d=t===\"auto\"?(matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\"):t;document.documentElement.setAttribute(\"data-bs-theme\",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="'.base_url('assets/css/app.css').'"></head><body class="bg-body-tertiary">';
+    echo '<!doctype html><html lang="de"><head><script>(function(){var t=localStorage.getItem(\"musicshare-theme\")||\"auto\";var d=t===\"auto\"?(matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\"):t;document.documentElement.setAttribute(\"data-bs-theme\",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="'.base_url('assets/css/app.css?v=' . rawurlencode(APP_VERSION)).'"></head><body class="bg-body-tertiary">';
     echo '<nav class="navbar navbar-expand-lg bg-dark navbar-dark"><div class="container"><a class="navbar-brand fw-semibold" href="'.base_url($admin?'admin/index.php':'').'">'.$app.'</a>';
     if ($admin && is_logged_in()) {
         echo '<div class="ms-auto d-flex gap-2 align-items-center"><button class="btn btn-sm btn-outline-light" type="button" id="themeToggle" title="Darstellung wechseln">◐</button><a class="btn btn-sm btn-outline-light" href="'.base_url('admin/index.php').'">Alben</a>';
@@ -181,7 +186,9 @@ function render_footer(): void {
         if (is_logged_in() && is_admin()) echo ' · <a class="text-body-secondary" href="' . base_url('admin/update.php') . '">Nach Updates suchen</a>';
         echo '</span></div></footer>';
     }
-    echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script src="'.base_url('assets/js/theme.js').'"></script><script src="'.base_url('assets/js/player.js').'"></script></body></html>';
+    echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>';
+    echo '<script>(function(){var k="musicshare-theme",m=["auto","light","dark"],q=window.matchMedia("(prefers-color-scheme: dark)");function a(v){var x=v==="auto"?(q.matches?"dark":"light"):v;document.documentElement.setAttribute("data-bs-theme",x);localStorage.setItem(k,v);var b=document.getElementById("themeToggle");if(b){b.textContent=v==="light"?"☀":v==="dark"?"☾":"◐";b.title="Darstellung: "+(v==="light"?"Hell":v==="dark"?"Dunkel":"Automatisch");}}var v=localStorage.getItem(k);if(m.indexOf(v)<0)v="auto";a(v);var b=document.getElementById("themeToggle");if(b)b.addEventListener("click",function(){v=m[(m.indexOf(v)+1)%m.length];a(v);});if(q.addEventListener)q.addEventListener("change",function(){if(v==="auto")a(v);});})();</script>';
+    echo '<script src="'.base_url('assets/js/player.js?v=' . rawurlencode(APP_VERSION) . '-' . time()).'"></script></body></html>';
 }
 
 function share_access_granted(array $share): bool {
@@ -407,4 +414,193 @@ function application_backups(string $root): array {
     $files = glob($root . '/storage/backups/*.zip') ?: [];
     usort($files, fn($a,$b) => filemtime($b) <=> filemtime($a));
     return $files;
+}
+
+function remove_directory_tree(string $path): void {
+    if (!is_dir($path)) return;
+    $items = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($path, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::CHILD_FIRST
+    );
+    foreach ($items as $item) {
+        if ($item->isDir()) @rmdir($item->getPathname());
+        else @unlink($item->getPathname());
+    }
+    @rmdir($path);
+}
+
+function validate_backup_archive(string $file): array {
+    if (!class_exists(ZipArchive::class)) throw new RuntimeException('ZipArchive ist nicht verfügbar.');
+    if (!is_file($file) || !str_ends_with(strtolower($file), '.zip')) throw new RuntimeException('Die Backupdatei ist ungültig.');
+    $zip = new ZipArchive();
+    if ($zip->open($file) !== true) throw new RuntimeException('Das Backup-ZIP konnte nicht geöffnet werden.');
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = str_replace('\\', '/', (string)$zip->getNameIndex($i));
+        if ($name === '' || str_starts_with($name, '/') || preg_match('~(^|/)\.\.(/|$)~', $name)) {
+            $zip->close();
+            throw new RuntimeException('Das Backup enthält einen unsicheren Dateipfad.');
+        }
+    }
+    $manifestRaw = $zip->getFromName('music-share-backup.json');
+    $zip->close();
+    if ($manifestRaw === false) throw new RuntimeException('Dies ist kein vollständiges Music-Share-Datenbackup.');
+    try {
+        $manifest = json_decode($manifestRaw, true, 512, JSON_THROW_ON_ERROR);
+    } catch (Throwable) {
+        throw new RuntimeException('Das Backup-Manifest ist beschädigt.');
+    }
+    if (!is_array($manifest) || ($manifest['format'] ?? '') !== 'music-share-full-backup' || (int)($manifest['format_version'] ?? 0) !== 1) {
+        throw new RuntimeException('Das Backup-Format wird nicht unterstützt.');
+    }
+    return $manifest;
+}
+
+function create_full_data_backup(string $root, PDO $pdo, string $prefix = 'manual'): string {
+    if (!class_exists(ZipArchive::class)) throw new RuntimeException('Für Backups wird die PHP-Erweiterung ZipArchive benötigt.');
+    $backupDir = $root . '/storage/backups';
+    if (!is_dir($backupDir) && !mkdir($backupDir, 0775, true) && !is_dir($backupDir)) throw new RuntimeException('Backup-Verzeichnis ist nicht beschreibbar.');
+
+    $safePrefix = preg_replace('/[^a-z0-9-]+/i', '-', $prefix) ?: 'manual';
+    $file = $backupDir . '/' . $safePrefix . '-full-' . APP_VERSION . '-' . date('Ymd-His') . '.zip';
+    $tmpDb = $root . '/storage/database-' . bin2hex(random_bytes(6)) . '.json';
+
+    $tables = [];
+    $stmt = $pdo->query("SHOW FULL TABLES WHERE Table_type = 'BASE TABLE'");
+    foreach ($stmt->fetchAll(PDO::FETCH_NUM) as $row) {
+        $table = (string)$row[0];
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $table)) continue;
+        $createRow = $pdo->query('SHOW CREATE TABLE `' . $table . '`')->fetch(PDO::FETCH_NUM);
+        if (!$createRow || empty($createRow[1])) continue;
+        $rows = $pdo->query('SELECT * FROM `' . $table . '`')->fetchAll(PDO::FETCH_ASSOC);
+        $tables[] = ['name' => $table, 'create_sql' => (string)$createRow[1], 'rows' => $rows];
+    }
+
+    $database = [
+        'format' => 'music-share-database-json',
+        'format_version' => 1,
+        'created_at' => date(DATE_ATOM),
+        'tables' => $tables,
+    ];
+    try {
+        file_put_contents($tmpDb, json_encode($database, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+    } catch (Throwable $e) {
+        @unlink($tmpDb);
+        throw new RuntimeException('Datenbank konnte nicht für das Backup exportiert werden: ' . $e->getMessage());
+    }
+
+    $manifest = [
+        'format' => 'music-share-full-backup',
+        'format_version' => 1,
+        'app_version' => APP_VERSION,
+        'created_at' => date(DATE_ATOM),
+        'includes' => ['database', 'uploads'],
+    ];
+
+    $zip = new ZipArchive();
+    if ($zip->open($file, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+        @unlink($tmpDb);
+        throw new RuntimeException('Backup konnte nicht erstellt werden.');
+    }
+    $zip->addFromString('music-share-backup.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $zip->addFile($tmpDb, 'database.json');
+
+    $uploads = $root . '/uploads';
+    if (is_dir($uploads)) {
+        $items = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($uploads, FilesystemIterator::SKIP_DOTS));
+        foreach ($items as $item) {
+            if (!$item->isFile()) continue;
+            $relative = str_replace('\\', '/', substr($item->getPathname(), strlen($root) + 1));
+            $zip->addFile($item->getPathname(), $relative);
+        }
+    }
+    $zip->close();
+    @unlink($tmpDb);
+    return $file;
+}
+
+function restore_full_data_backup(string $root, PDO $pdo, string $backupName): void {
+    $safe = basename($backupName);
+    $file = $root . '/storage/backups/' . $safe;
+    validate_backup_archive($file);
+
+    $tmp = $root . '/storage/full-restore-' . bin2hex(random_bytes(6));
+    if (!mkdir($tmp, 0775, true) && !is_dir($tmp)) throw new RuntimeException('Temporäres Wiederherstellungsverzeichnis konnte nicht erstellt werden.');
+    $zip = new ZipArchive();
+    if ($zip->open($file) !== true || !$zip->extractTo($tmp)) {
+        remove_directory_tree($tmp);
+        throw new RuntimeException('Backup konnte nicht entpackt werden.');
+    }
+    $zip->close();
+
+    try {
+        $dbFile = $tmp . '/database.json';
+        if (!is_file($dbFile)) throw new RuntimeException('Im Backup fehlt die Datenbank.');
+        $database = json_decode((string)file_get_contents($dbFile), true, 512, JSON_THROW_ON_ERROR);
+        if (($database['format'] ?? '') !== 'music-share-database-json' || !is_array($database['tables'] ?? null)) {
+            throw new RuntimeException('Der Datenbankexport im Backup ist ungültig.');
+        }
+
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
+        foreach ($database['tables'] as $tableData) {
+            $table = (string)($tableData['name'] ?? '');
+            $create = (string)($tableData['create_sql'] ?? '');
+            if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || $create === '') throw new RuntimeException('Ungültige Tabellendefinition im Backup.');
+            $pdo->exec('DROP TABLE IF EXISTS `' . $table . '`');
+            $pdo->exec($create);
+            $rows = $tableData['rows'] ?? [];
+            if (!is_array($rows)) continue;
+            foreach ($rows as $row) {
+                if (!is_array($row) || !$row) continue;
+                $columns = array_keys($row);
+                foreach ($columns as $column) {
+                    if (!preg_match('/^[A-Za-z0-9_]+$/', (string)$column)) throw new RuntimeException('Ungültiger Spaltenname im Backup.');
+                }
+                $quotedColumns = implode(',', array_map(fn($column) => '`' . $column . '`', $columns));
+                $placeholders = implode(',', array_fill(0, count($columns), '?'));
+                $insert = $pdo->prepare('INSERT INTO `' . $table . '` (' . $quotedColumns . ') VALUES (' . $placeholders . ')');
+                $insert->execute(array_values($row));
+            }
+        }
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
+
+        $restoredUploads = $tmp . '/uploads';
+        if (is_dir($restoredUploads)) {
+            $targetUploads = $root . '/uploads';
+            if (is_dir($targetUploads)) remove_directory_tree($targetUploads);
+            if (!mkdir($targetUploads, 0775, true) && !is_dir($targetUploads)) throw new RuntimeException('Upload-Verzeichnis konnte nicht erstellt werden.');
+            recursive_copy_update($restoredUploads, $targetUploads, []);
+        }
+    } catch (Throwable $e) {
+        try { $pdo->exec('SET FOREIGN_KEY_CHECKS=1'); } catch (Throwable) {}
+        throw $e;
+    } finally {
+        remove_directory_tree($tmp);
+    }
+}
+
+function delete_stored_backup(string $root, string $backupName): void {
+    $safe = basename($backupName);
+    if ($safe !== $backupName || !str_ends_with(strtolower($safe), '.zip')) throw new RuntimeException('Ungültiger Backupname.');
+    $file = $root . '/storage/backups/' . $safe;
+    if (!is_file($file)) throw new RuntimeException('Backup wurde nicht gefunden.');
+    if (!unlink($file)) throw new RuntimeException('Backup konnte nicht vom Server gelöscht werden.');
+}
+
+function stored_backup_type(string $file): string {
+    $name = strtolower(basename($file));
+    if (str_starts_with($name, 'before-update-')) return 'application';
+    if (str_contains($name, '-full-') || str_starts_with($name, 'imported-')) {
+        try {
+            validate_backup_archive($file);
+            return 'full';
+        } catch (Throwable) {
+            return 'invalid';
+        }
+    }
+    try {
+        validate_backup_archive($file);
+        return 'full';
+    } catch (Throwable) {
+        return 'application';
+    }
 }

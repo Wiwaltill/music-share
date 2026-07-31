@@ -16,3 +16,12 @@ body > main { flex: 1 0 auto; width: 100%; }
 .github-octicon{display:block;flex:0 0 auto}
 @media(max-width:700px){.public-project-footer{padding:.85rem 1rem 7.5rem}}
 .cover-zoom-button{display:block;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.cover-modal-image{max-width:min(92vw,1100px);max-height:90vh;border-radius:1rem;box-shadow:0 2rem 6rem rgba(0,0,0,.65)}.cover-modal-close{position:absolute;right:.75rem;top:.75rem;z-index:2;background-color:rgba(0,0,0,.5);border-radius:50%;padding:.65rem}.album-meta{font-size:.9rem;letter-spacing:.04em;opacity:.72}.album-colors-enabled .btn-contrast,.album-colors-enabled .play-button.is-playing{background:color-mix(in srgb,var(--album-accent) 72%,#111);border-color:color-mix(in srgb,var(--album-accent) 80%,white);color:white}.album-colors-enabled .plyr{--plyr-color-main:var(--album-accent)}
+
+.backup-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.backup-info{min-width:0;flex:1 1 22rem}
+.backup-actions{display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap}
+.backup-actions form{margin:0}
+@media(max-width:767.98px){.backup-actions{width:100%;justify-content:flex-start}.backup-actions .btn{width:100%}.backup-actions form{flex:1 1 100%}.backup-actions a{flex:1 1 100%}}
+[data-bs-theme="dark"] .card,[data-bs-theme="dark"] .list-group-item{--bs-card-bg:var(--bs-body-bg);--bs-list-group-bg:var(--bs-body-bg)}
+
+.backup-actions .btn{min-width:7.5rem}.backup-actions .btn-warning{color:#111!important}.backup-actions .btn-danger{color:#fff!important}[data-bs-theme=dark] .backup-actions .btn-outline-secondary{color:#f8f9fa;border-color:#adb5bd}[data-bs-theme=dark] .backup-actions .btn-outline-secondary:hover{background:#adb5bd;color:#111}.backup-list .list-group-item{padding:1rem}
