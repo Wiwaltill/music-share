@@ -237,7 +237,7 @@
     row.className = 'track-admin-row border rounded-3 p-3 bg-body';
     row.draggable = true;
     row.dataset.id = track.id;
-    row.innerHTML = '<div class="d-flex align-items-center gap-3"><div class="drag-handle">☰</div><div class="track-auto-no badge text-bg-secondary"></div><input class="form-control form-control-sm track-title"><button class="btn btn-sm btn-outline-danger track-delete" type="button">Löschen</button></div>';
+    row.innerHTML = '<div class="d-flex align-items-center gap-3"><input class="form-check-input track-select flex-shrink-0" type="checkbox" aria-label="Titel auswählen"><div class="drag-handle">☰</div><div class="track-auto-no badge text-bg-secondary"></div><input class="form-control form-control-sm track-title"><button class="btn btn-sm btn-outline-danger track-delete" type="button">Löschen</button></div>';
     row.querySelector('.track-title').value = track.title;
     const list = ensureDisc(Math.max(1, Number(track.disc_no) || 1)).querySelector('.disc-track-list');
     const position = Math.max(1, Number(track.track_no) || list.children.length + 1);
@@ -247,20 +247,72 @@
     renumber();
   }
 
+  const selectAllTracks = document.querySelector('#selectAllTracks');
+  const bulkDeleteTracks = document.querySelector('#bulkDeleteTracks');
+  const selectedTrackCount = document.querySelector('#selectedTrackCount');
+
+  function selectedRows() {
+    return [...document.querySelectorAll('.track-admin-row')].filter(row => row.querySelector('.track-select')?.checked);
+  }
+
+  function refreshBulkSelection() {
+    const rows = [...document.querySelectorAll('.track-admin-row')];
+    const selected = selectedRows().length;
+    if (selectedTrackCount) selectedTrackCount.textContent = selected;
+    if (bulkDeleteTracks) bulkDeleteTracks.disabled = selected === 0;
+    if (selectAllTracks) {
+      selectAllTracks.checked = rows.length > 0 && selected === rows.length;
+      selectAllTracks.indeterminate = selected > 0 && selected < rows.length;
+    }
+  }
+
   function bindRow(row) {
+    const checkbox = row.querySelector('.track-select');
+    checkbox?.addEventListener('change', refreshBulkSelection);
+    checkbox?.addEventListener('mousedown', event => event.stopPropagation());
     row.querySelector('.track-delete')?.addEventListener('click', async () => {
       if (!confirm('Titel wirklich löschen?')) return;
       const fd = new FormData();
       fd.append('csrf', cfg.csrf);
       fd.append('id', row.dataset.id);
       const response = await fetch(cfg.deleteUrl, { method: 'POST', body: fd });
-      if (response.ok) { row.remove(); renumber(); }
+      if (response.ok) { row.remove(); renumber(); refreshBulkSelection(); }
     });
-    row.addEventListener('dragstart', () => row.classList.add('dragging'));
+    row.addEventListener('dragstart', event => {
+      if (event.target.closest('input,button')) { event.preventDefault(); return; }
+      row.classList.add('dragging');
+    });
     row.addEventListener('dragend', () => { row.classList.remove('dragging'); renumber(); });
   }
 
   document.querySelectorAll('.track-admin-row').forEach(bindRow);
+  selectAllTracks?.addEventListener('change', () => {
+    document.querySelectorAll('.track-select').forEach(checkbox => { checkbox.checked = selectAllTracks.checked; });
+    refreshBulkSelection();
+  });
+  bulkDeleteTracks?.addEventListener('click', async () => {
+    const rows = selectedRows();
+    if (!rows.length) return;
+    if (!confirm(`${rows.length} ausgewählte Titel wirklich dauerhaft löschen?`)) return;
+    const fd = new FormData();
+    fd.append('csrf', cfg.csrf);
+    fd.append('album_id', cfg.albumId);
+    fd.append('ids', JSON.stringify(rows.map(row => Number(row.dataset.id))));
+    bulkDeleteTracks.disabled = true;
+    const response = await fetch(cfg.bulkDeleteUrl, { method: 'POST', body: fd });
+    let result = {};
+    try { result = await response.json(); } catch (_) {}
+    if (!response.ok || !result.ok) {
+      alert(result.message || 'Die ausgewählten Titel konnten nicht gelöscht werden.');
+      refreshBulkSelection();
+      return;
+    }
+    const deletedIds = new Set((result.deleted_ids || []).map(String));
+    rows.forEach(row => { if (deletedIds.has(String(row.dataset.id))) row.remove(); });
+    renumber();
+    refreshBulkSelection();
+  });
+  refreshBulkSelection();
   boards?.addEventListener('dragover', event => {
     event.preventDefault();
     const list = event.target.closest('.disc-track-list');
