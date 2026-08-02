@@ -34,6 +34,6 @@ run_migrations($pdo);
 
 $scriptBase = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
 $translatablePages = ['index.php','album.php','album_edit.php','settings.php','login.php','trash.php','update.php','shares.php','share.php'];
-if (current_language() === 'en' && in_array($scriptBase, $translatablePages, true)) {
+if (in_array(current_language(), ['en','fr'], true) && in_array($scriptBase, $translatablePages, true)) {
     ob_start('translate_static_html');
 }

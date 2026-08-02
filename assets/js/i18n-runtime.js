@@ -1,5 +1,8 @@
 (() => {
-  if (!document.documentElement.lang.toLowerCase().startsWith('en')) return;
+  const lang = document.documentElement.lang.toLowerCase();
+  const isEnglish = lang.startsWith('en');
+  const isFrench = lang.startsWith('fr');
+  if (!isEnglish && !isFrench) return;
 
   const exact = new Map(Object.entries({
     'Papierkorb':'Trash',
@@ -59,10 +62,26 @@
     'Papierkorb ist leer.':'The trash is empty.'
   }));
 
+  const french = new Map(Object.entries({
+    'Papierkorb':'Corbeille','Eigenes Album':'Mon album','Fremdes Album':'Album d’un autre utilisateur',
+    'Albumtitel':'Titre de l’album','Erscheinungsjahr':'Année de sortie','Beschreibung':'Description',
+    'Cover löschen':'Supprimer la pochette','Titel':'Piste','Titel hochladen':'Téléverser des pistes',
+    'Neue Titel hochladen':'Téléverser de nouvelles pistes','Bereit':'Prêt','Fehler':'Erreur','Hinweis':'Information',
+    'Bestätigen':'Confirmer','Abbrechen':'Annuler','Löschen':'Supprimer','Schließen':'Fermer','Speichern':'Enregistrer',
+    'Wiederherstellen':'Restaurer','Endgültig löschen':'Supprimer définitivement','Alle Titel auswählen':'Sélectionner toutes les pistes',
+    'Ausgewählte löschen':'Supprimer la sélection','CD hinzufügen':'Ajouter un disque','Albumtitel übernehmen?':'Utiliser le titre de l’album ?',
+    'Titel ersetzen':'Remplacer le titre','Cover übernehmen?':'Utiliser la pochette ?','Cover übernehmen':'Utiliser la pochette',
+    'Titel wirklich löschen?':'Supprimer cette piste ?','Titel löschen':'Supprimer les pistes','Verschieben':'Déplacer',
+    'Link kopiert':'Lien copié','Teilen':'Partager','Album wird angelegt …':'Création de l’album …',
+    'Album vollständig angelegt.':'Album créé avec succès.','Bitte nur MP3-Dateien auswählen oder ablegen.':'Veuillez sélectionner ou déposer uniquement des fichiers MP3.',
+    'Der Trash ist leer.':'La corbeille est vide.','Der The trash is empty.':'La corbeille est vide.'
+  }));
+
   const translateText = value => {
     const trimmed = value.trim();
     if (!trimmed) return value;
-    if (exact.has(trimmed)) return value.replace(trimmed, exact.get(trimmed));
+    const dictionary = isFrench ? french : exact;
+    if (dictionary.has(trimmed)) return value.replace(trimmed, dictionary.get(trimmed));
 
     let out = value;
     const patterns = [
@@ -113,10 +132,10 @@
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'btn btn-outline-secondary';
-      button.textContent = 'Choose file';
+      button.textContent = isFrench ? 'Choisir un fichier' : 'Choose file';
       const label = document.createElement('span');
       label.className = 'form-control text-body-secondary text-truncate';
-      label.textContent = 'No file selected';
+      label.textContent = isFrench ? 'Aucun fichier sélectionné' : 'No file selected';
 
       input.parentNode.insertBefore(wrapper, input);
       wrapper.append(button, label);
@@ -126,11 +145,11 @@
       button.addEventListener('click', () => input.click());
       input.addEventListener('change', () => {
         if (!input.files?.length) {
-          label.textContent = 'No file selected';
+          label.textContent = isFrench ? 'Aucun fichier sélectionné' : 'No file selected';
         } else if (input.files.length === 1) {
           label.textContent = input.files[0].name;
         } else {
-          label.textContent = `${input.files.length} files selected`;
+          label.textContent = isFrench ? `${input.files.length} fichiers sélectionnés` : `${input.files.length} files selected`;
         }
       });
     });

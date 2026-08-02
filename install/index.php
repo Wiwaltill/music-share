@@ -37,7 +37,7 @@ function detectBaseUrl(): string
 
 $detectedBaseUrl = detectBaseUrl();
 $installerLanguage = (string)($_POST['language'] ?? $_GET['language'] ?? 'de');
-if (!in_array($installerLanguage, ['de','en'], true)) $installerLanguage = 'de';
+if (!in_array($installerLanguage, ['de','en','fr'], true)) $installerLanguage = 'de';
 $installerText = [
     'de' => [
         'title'=>'Album Share installieren','application'=>'Anwendung','name'=>'Name','base_url'=>'Basis-URL',
@@ -52,6 +52,13 @@ $installerText = [
         'database'=>'Database','host'=>'Host','port'=>'Port','db'=>'Database','user'=>'User',
         'password'=>'Password','administrator'=>'Administrator','start'=>'Start installation','language'=>'Language',
         'invalid_url'=>'Please enter a valid base URL including http:// or https://.'
+    ],
+    'fr' => [
+        'title'=>'Installer Album Share','application'=>'Application','name'=>'Nom','base_url'=>'URL de base',
+        'base_help'=>'Détectée automatiquement à partir du domaine actuel et du chemin d’installation.',
+        'database'=>'Base de données','host'=>'Hôte','port'=>'Port','db'=>'Base de données','user'=>'Utilisateur',
+        'password'=>'Mot de passe','administrator'=>'Administrateur','start'=>'Démarrer l’installation','language'=>'Langue',
+        'invalid_url'=>'Veuillez saisir une URL de base valide avec http:// ou https://.'
     ],
 ];
 $itxt = $installerText[$installerLanguage];
@@ -172,6 +179,7 @@ function e(string $value): string
                     <select class="form-select" id="language" name="language" onchange="this.form.submit()">
                         <option value="de" <?=$installerLanguage==='de'?'selected':''?>>Deutsch</option>
                         <option value="en" <?=$installerLanguage==='en'?'selected':''?>>English</option>
+                        <option value="fr" <?=$installerLanguage==='fr'?'selected':''?>>Français</option>
                     </select>
                 </div>
                 <h2 class="h5 mt-4"><?=e($itxt['application'])?></h2>
