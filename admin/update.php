@@ -141,14 +141,14 @@ $migrationBackups = migration_backups($root);
       <form method="post"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="check"><button class="btn btn-outline-primary">Jetzt prüfen</button></form></div>
       <hr>
       <?php if ($release): ?>
-        <div class="text-body-secondary small">Neuestes GitHub-Release</div><div class="fs-4 fw-semibold"><?=e($latest ?: 'Unbekannt')?></div>
+        <div class="text-body-secondary small"><?=current_language()==='en'?'Latest GitHub release':'Neuestes GitHub-Release'?></div><div class="fs-4 fw-semibold"><?=e($latest ?: 'Unbekannt')?></div>
         <?php if (!empty($release['name'])): ?><div class="mt-1"><?=e((string)$release['name'])?></div><?php endif; ?><?php if (!empty($release['body'])): ?><details class="mt-3"><summary class="fw-semibold">Changelog anzeigen</summary><div class="release-notes mt-2 p-3 rounded bg-body-tertiary"><?=nl2br(e((string)$release['body']))?></div></details><?php endif; ?>
         <?php if ($available): ?>
           <div class="alert alert-success mt-3 mb-3">Eine neue Version ist verfügbar.</div>
           <?php if ($package): ?>
           <form method="post" data-confirm="Update jetzt installieren? Vorher wird automatisch ein Backup erstellt."><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="install"><button class="btn btn-primary">Version <?=e($latest)?> installieren</button></form><?php if (($package['type'] ?? '') === 'source'): ?><div class="small text-body-secondary mt-2">Verwendet die automatisch von GitHub erzeugte <strong>Source code (zip)</strong>-Datei.</div><?php else: ?><div class="small text-body-secondary mt-2">Verwendet das Release-Asset <strong><?=e((string)($package['name'] ?? 'ZIP'))?></strong>.</div><?php endif; ?>
           <?php else: ?><div class="alert alert-warning mt-3 mb-0">Für dieses Release konnte keine ZIP-Datei gefunden werden.</div><?php endif; ?>
-        <?php else: ?><div class="alert alert-secondary mt-3 mb-0">Die Installation ist aktuell.</div><?php endif; ?>
+        <?php else: ?><div class="alert alert-secondary mt-3 mb-0"><?=current_language()==='en'?'The installation is up to date.':'Die Installation ist aktuell.'?></div><?php endif; ?>
       <?php endif; ?>
     </div></div>
   </div>
@@ -168,7 +168,7 @@ $migrationBackups = migration_backups($root);
     <div class="alert alert-warning small"><strong>Wiederherstellung ersetzt vorhandene Daten:</strong> Datenbank, Cover und Audiodateien der Zielinstanz werden durch den Inhalt des Backups ersetzt. Die lokale <code>config.php</code> und damit Basis-URL sowie Datenbankzugang bleiben erhalten. Vorher wird automatisch ein Sicherungspunkt erstellt.</div>
     <form method="post" enctype="multipart/form-data" class="row g-2 align-items-end mb-4">
       <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="upload_migration_backup">
-      <div class="col-md"><label class="form-label" for="migration_backup">Backup von einer anderen Instanz hochladen</label><input class="form-control" type="file" id="migration_backup" name="migration_backup" accept=".zip,application/zip" required></div>
+      <div class="col-md"><label class="form-label" for="migration_backup">Backup von einer anderen Instanz hochladen</label><div class="input-group"><label class="btn btn-outline-secondary mb-0" for="migration_backup"><?=current_language()==='en'?'Choose file':'Datei auswählen'?></label><span class="form-control text-body-secondary text-truncate" data-file-name><?=current_language()==='en'?'No file selected':'Keine Datei ausgewählt'?></span><input class="visually-hidden" type="file" id="migration_backup" name="migration_backup" accept=".zip,application/zip" required onchange="this.closest('.input-group').querySelector('[data-file-name]').textContent=this.files.length?this.files[0].name:<?=htmlspecialchars(json_encode(current_language()==='en'?'No file selected':'Keine Datei ausgewählt'),ENT_QUOTES)?>"></div></div>
       <div class="col-md-auto"><button class="btn btn-outline-primary w-100">ZIP hochladen und prüfen</button></div>
     </form>
     <div class="list-group">

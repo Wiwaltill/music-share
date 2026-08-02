@@ -36,9 +36,29 @@ function detectBaseUrl(): string
 }
 
 $detectedBaseUrl = detectBaseUrl();
+$installerLanguage = (string)($_POST['language'] ?? $_GET['language'] ?? 'de');
+if (!in_array($installerLanguage, ['de','en'], true)) $installerLanguage = 'de';
+$installerText = [
+    'de' => [
+        'title'=>'Album Share installieren','application'=>'Anwendung','name'=>'Name','base_url'=>'Basis-URL',
+        'base_help'=>'Automatisch aus der aktuell aufgerufenen Domain und dem Installationspfad erkannt.',
+        'database'=>'Datenbank','host'=>'Host','port'=>'Port','db'=>'Datenbank','user'=>'Benutzer',
+        'password'=>'Passwort','administrator'=>'Administrator','start'=>'Installation starten','language'=>'Sprache',
+        'invalid_url'=>'Bitte eine gültige Basis-URL mit http:// oder https:// angeben.'
+    ],
+    'en' => [
+        'title'=>'Install Album Share','application'=>'Application','name'=>'Name','base_url'=>'Base URL',
+        'base_help'=>'Automatically detected from the current domain and installation path.',
+        'database'=>'Database','host'=>'Host','port'=>'Port','db'=>'Database','user'=>'User',
+        'password'=>'Password','administrator'=>'Administrator','start'=>'Start installation','language'=>'Language',
+        'invalid_url'=>'Please enter a valid base URL including http:// or https://.'
+    ],
+];
+$itxt = $installerText[$installerLanguage];
 $error = '';
 
 $form = [
+    'language' => $installerLanguage,
     'app_name' => 'Album Share',
     'base_url' => $detectedBaseUrl,
     'db_host' => 'localhost',
@@ -55,13 +75,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $baseUrl = rtrim($form['base_url'], '/');
     if (!filter_var($baseUrl, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $baseUrl)) {
-        $error = 'Bitte eine gültige Basis-URL mit http:// oder https:// angeben.';
+        $error = $itxt['invalid_url'];
     } else {
         $cfg = [
             'app' => [
                 'name' => $form['app_name'] !== '' ? $form['app_name'] : 'Album Share',
                 'base_url' => $baseUrl,
                 'timezone' => 'Europe/Berlin',
+                'language' => $installerLanguage,
                 'max_upload_mb' => 500,
             ],
             'db' => [
@@ -128,74 +149,81 @@ function e(string $value): string
 }
 ?>
 <!doctype html>
-<html lang="de">
+<html lang="<?=e($installerLanguage)?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
-    <title>Album Share installieren</title>
+    <title><?=e($itxt['title'])?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
 <main class="container py-5" style="max-width: 760px">
     <div class="card shadow-sm">
         <div class="card-body p-4">
-            <h1 class="h3 mb-3">Album Share installieren</h1>
+            <h1 class="h3 mb-3"><?=e($itxt['title'])?></h1>
 
             <?php if ($error !== ''): ?>
                 <div class="alert alert-danger"><?= e($error) ?></div>
             <?php endif; ?>
 
             <form method="post" autocomplete="off">
-                <h2 class="h5 mt-4">Anwendung</h2>
+                <div class="mb-4">
+                    <label class="form-label" for="language"><?=e($itxt['language'])?></label>
+                    <select class="form-select" id="language" name="language" onchange="this.form.submit()">
+                        <option value="de" <?=$installerLanguage==='de'?'selected':''?>>Deutsch</option>
+                        <option value="en" <?=$installerLanguage==='en'?'selected':''?>>English</option>
+                    </select>
+                </div>
+                <h2 class="h5 mt-4"><?=e($itxt['application'])?></h2>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label" for="app_name">Name</label>
+                        <label class="form-label" for="app_name"><?=e($itxt['name'])?></label>
                         <input class="form-control" id="app_name" name="app_name" value="<?= e($form['app_name']) ?>" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="base_url">Basis-URL</label>
+                        <label class="form-label" for="base_url"><?=e($itxt['base_url'])?></label>
                         <input class="form-control" type="url" id="base_url" name="base_url" value="<?= e($form['base_url']) ?>" required>
-                        <div class="form-text">Automatisch aus der aktuell aufgerufenen Domain und dem Installationspfad erkannt.</div>
+                        <div class="form-text"><?=e($itxt['base_help'])?></div>
                     </div>
                 </div>
 
-                <h2 class="h5 mt-4">Datenbank</h2>
+                <h2 class="h5 mt-4"><?=e($itxt['database'])?></h2>
                 <div class="row g-3">
                     <div class="col-md-8">
-                        <label class="form-label" for="db_host">Host</label>
+                        <label class="form-label" for="db_host"><?=e($itxt['host'])?></label>
                         <input class="form-control" id="db_host" name="db_host" value="<?= e($form['db_host']) ?>" required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label" for="db_port">Port</label>
+                        <label class="form-label" for="db_port"><?=e($itxt['port'])?></label>
                         <input class="form-control" type="number" min="1" max="65535" id="db_port" name="db_port" value="<?= e($form['db_port']) ?>" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="db_name">Datenbank</label>
+                        <label class="form-label" for="db_name"><?=e($itxt['db'])?></label>
                         <input class="form-control" id="db_name" name="db_name" value="<?= e($form['db_name']) ?>" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="db_user">Benutzer</label>
+                        <label class="form-label" for="db_user"><?=e($itxt['user'])?></label>
                         <input class="form-control" id="db_user" name="db_user" value="<?= e($form['db_user']) ?>" required>
                     </div>
                     <div class="col-12">
-                        <label class="form-label" for="db_pass">Passwort</label>
+                        <label class="form-label" for="db_pass"><?=e($itxt['password'])?></label>
                         <input type="password" class="form-control" id="db_pass" name="db_pass">
                     </div>
                 </div>
 
-                <h2 class="h5 mt-4">Administrator</h2>
+                <h2 class="h5 mt-4"><?=e($itxt['administrator'])?></h2>
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label" for="admin_user">Benutzername</label>
                         <input class="form-control" id="admin_user" name="admin_user" value="<?= e($form['admin_user']) ?>" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label" for="admin_pass">Passwort</label>
+                        <label class="form-label" for="admin_pass"><?=e($itxt['password'])?></label>
                         <input type="password" minlength="8" class="form-control" id="admin_pass" name="admin_pass" required>
                     </div>
                 </div>
 
-                <button class="btn btn-primary mt-4">Installation starten</button>
+                <button class="btn btn-primary mt-4"><?=e($itxt['start'])?></button>
             </form>
         </div>
     </div>

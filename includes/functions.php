@@ -73,6 +73,190 @@ function set_setting(string $key, string $value): void {
     $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value) VALUES(?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
     $stmt->execute([$key,$value]);
 }
+
+function supported_languages(): array {
+    return ['de' => 'Deutsch', 'en' => 'English'];
+}
+function current_language(): string {
+    global $config;
+    static $language = null;
+    if ($language !== null) return $language;
+    $configured = (string)get_setting('language', (string)($config['app']['language'] ?? 'de'));
+    return $language = array_key_exists($configured, supported_languages()) ? $configured : 'de';
+}
+function t(string $key, ?string $fallback = null): string {
+    static $catalogues = [];
+    $language = current_language();
+    if (!isset($catalogues[$language])) {
+        $file = __DIR__ . '/lang/' . $language . '.php';
+        $catalogues[$language] = is_file($file) ? require $file : [];
+    }
+    return array_key_exists($key, $catalogues[$language])
+        ? (string)$catalogues[$language][$key]
+        : ($fallback ?? $key);
+}
+function translate_static_html(string $html): string {
+    if (current_language() !== 'en') return $html;
+    return strtr($html, [
+        'Neuestes GitHub-Release' => 'Latest GitHub release.',
+        'Die Installation ist aktuell.' => 'The installation is up to date.',
+        'Der The trash is empty.' => 'The trash is empty.',
+        'Albumdaten speichern' => 'Save album details',
+        'Administratoren – Haben automatisch Zugriff' => 'Administrators – Automatically have access',
+        'Administratoren - Haben automatisch Zugriff' => 'Administrators - Automatically have access',
+        'z. B. Kunde / Veranstaltung' => 'e.g. client / event',
+        'Backups und Rollback' => 'Backups and rollback',
+        'Vor Updates und Wiederherstellungen wird automatisch gesichert.' => 'A backup is created automatically before updates and restores.',
+        'Noch keine Backups vorhanden.' => 'No backups available yet.',
+        'Update-Schutz' => 'Update protection',
+        'Vor jeder Installation wird ein Backup der Programmdateien unter storage/backups/ angelegt.' => 'Before each installation, a backup of the application files is created in storage/backups/.',
+        'config.php, uploads/ und storage/ werden durch Updates nicht überschrieben.' => 'config.php, uploads/ and storage/ are not overwritten by updates.',
+        'Jetzt prüfen' => 'Check now',
+        'Neue Versionen direkt aus den GitHub-Releases installieren.' => 'Install new versions directly from GitHub releases.',
+        'Migration und vollständige Datensicherung' => 'Migration and full data backup',
+        'Sichert Datenbank, Cover und Audiodateien für den Umzug auf eine andere installierte Music-Share-Instanz.' => 'Backs up the database, covers and audio files for migration to another installed Music Share instance.',
+        'Wiederherstellung ersetzt vorhandene Daten: Datenbank, Cover und Audiodateien der Zielinstanz werden durch den Inhalt des Backups ersetzt. Die lokale config.php und damit Basis-URL sowie Datenbankzugang bleiben erhalten. Vorher wird automatisch ein Sicherungspunkt erstellt.' => 'Restoring replaces existing data: the target instance database, covers and audio files are replaced with the backup contents. The local config.php, including base URL and database access, remains unchanged. A restore point is created automatically beforehand.',
+        'Backup von einer anderen Instanz hochladen' => 'Upload backup from another instance',
+        'Noch keine Migrationsbackups vorhanden.' => 'No migration backups available yet.',
+        'ZIP hochladen und prüfen' => 'Upload and validate ZIP',
+        'Der Trash ist leer.' => 'The trash is empty.',
+        'Papierkorb ist leer.' => 'The trash is empty.',
+        'Datei auswählen' => 'Choose file',
+        'Keine Datei ausgewählt' => 'No file selected',
+
+        'Musikalben hochladen, gestalten und teilen.' => 'Upload, present and share music albums.',
+        'Keine Alben für diese Suche gefunden.' => 'No albums found for this search.',
+        'Albumdaten, Cover, CDs und Reihenfolge werden aus den MP3-Tags übernommen.' => 'Album details, cover, discs and order are imported from the MP3 tags.',
+        'Noch keine Dateien ausgewählt.' => 'No files selected yet.',
+        'Album anlegen und hochladen' => 'Create and upload album',
+        'Jahr' => 'Year',
+        'Album erstellen' => 'Create album',
+        'Audiodateien hier ablegen' => 'Drop audio files here',
+        'Dateien werden vor dem Upload mit Name, Größe und erkannten MP3-Tags angezeigt.' => 'Files are shown with name, size and detected MP3 tags before upload.',
+        'Dateien auswählen' => 'Select files',
+        'Titel per Drag-and-drop innerhalb einer CD oder auf eine andere CD verschieben. Die Titelnummer entsteht automatisch aus der Position.' => 'Drag and drop tracks within a disc or onto another disc. Track numbers are generated automatically from their positions.',
+        'CD entfernen' => 'Remove disc',
+        'Reihenfolge speichern' => 'Save order',
+        'Diese Nutzer sehen das Album nach der Anmeldung und dürfen Titel, Albumdaten und Freigabelinks mit verwalten.' => 'These users can see the album after signing in and may manage tracks, album details and share links.',
+        'Nutzer auswählen …' => 'Select user …',
+        'Hinzufügen' => 'Add',
+        'Entfernen' => 'Remove',
+        'Noch keine weiteren Nutzer freigegeben.' => 'No additional users have access yet.',
+        'Freigabelink erstellen' => 'Create share link',
+        'Änderungen speichern' => 'Save changes',
+        'Öffnen' => 'Open',
+        'Freigabelink löschen' => 'Delete share link',
+        'Noch keine Freigaben vorhanden.' => 'No share links yet.',
+        'Das Album kann 30 Tage lang wiederhergestellt werden. Danach wird es samt Dateien automatisch endgültig gelöscht.' => 'The album can be restored for 30 days. After that, it and all associated files are permanently deleted automatically.',
+        'Cover wurde gelöscht.' => 'Cover deleted.',
+        'Nutzer wurde zur internen Mitverwaltung hinzugefügt.' => 'User added as an internal collaborator.',
+        'Interne Freigabe wurde entfernt.' => 'Internal access removed.',
+        'Cover wirklich löschen?' => 'Delete the cover?',
+        'Freigabelink wirklich löschen?' => 'Delete this share link?',
+
+        'Getaggtes Album direkt hochladen' => 'Upload tagged album directly',
+        'Wähle vollständig getaggte MP3-Dateien. Album, Cover, CDs und Reihenfolge werden automatisch vorbereitet.' => 'Select fully tagged MP3 files. Album, cover, discs and order are prepared automatically.',
+        'Album direkt hochladen' => 'Upload album directly',
+        'Neues Album' => 'New album',
+        'Eigenes Album' => 'Own album',
+        'Fremdes Album' => 'Other user’s album',
+        'Erstellt von' => 'Created by',
+        'Album ansehen' => 'View album',
+        'Vorschau' => 'Preview',
+        'Verwalten' => 'Manage',
+        'Album verwalten' => 'Manage album',
+        'Metadaten, Titel und Freigaben an einem Ort.' => 'Metadata, tracks and shares in one place.',
+        'Zuerst Albumdaten und Cover anlegen.' => 'Create album details and cover first.',
+        'Albumdaten gespeichert. Jetzt können die Titel hochgeladen werden.' => 'Album details saved. Tracks can now be uploaded.',
+        'Albumtitel' => 'Album title',
+        'Interpret' => 'Artist',
+        'Album Artist' => 'Album artist',
+        'Beschreibung' => 'Description',
+        'Erscheinungsjahr' => 'Release year',
+        'Cover löschen' => 'Delete cover',
+        'Cover auswählen' => 'Select cover',
+        'Titel hochladen' => 'Upload tracks',
+        'Neue Titel hochladen' => 'Upload new tracks',
+        'Dateien hierher ziehen oder auswählen.' => 'Drag files here or select them.',
+        'CDs und Reihenfolge' => 'Discs and order',
+        'CD hinzufügen' => 'Add disc',
+        'Alle Titel auswählen' => 'Select all tracks',
+        'Ausgewählte löschen' => 'Delete selected',
+        'Interne Mitverwaltung' => 'Internal collaborators',
+        'Diese Nutzer sehen das Album nach der Anmeldung und dürfen Titel, Albumdaten und Freigaben verwalten.' => 'These users can see the album after signing in and may manage tracks, album details and shares.',
+        'Nutzer ohne Zugriff' => 'Users without access',
+        'bereits berechtigt' => 'already has access',
+        'Zugriff hinzufügen' => 'Add access',
+        'Freigabelinks' => 'Share links',
+        'Bezeichnung' => 'Label',
+        'Optionales Passwort' => 'Optional password',
+        'Neues Passwort' => 'New password',
+        'Passwort unverändert lassen' => 'Keep current password',
+        'Ablaufdatum' => 'Expiry date',
+        'Downloads erlauben' => 'Allow downloads',
+        'Freigabe erstellen' => 'Create share',
+        'Freigabe speichern' => 'Save share',
+        'Link kopieren' => 'Copy link',
+        'Unbegrenzt' => 'Unlimited',
+        'Läuft heute ab' => 'Expires today',
+        'läuft heute ab' => 'expires today',
+        'Abgelaufen' => 'Expired',
+        'Gefahrenbereich' => 'Danger zone',
+        'Album in den Papierkorb verschieben' => 'Move album to trash',
+        'Das Album kann 30 Tage lang wiederhergestellt werden. Danach wird es automatisch endgültig gelöscht.' => 'The album can be restored for 30 days. After that it is permanently deleted automatically.',
+        'In den Papierkorb' => 'Move to trash',
+        'Papierkorb' => 'Trash',
+        'Alben werden nach 30 Tagen automatisch endgültig gelöscht.' => 'Albums are permanently deleted automatically after 30 days.',
+        'gelöscht am' => 'deleted on',
+        'Wiederherstellen' => 'Restore',
+        'Endgültig löschen' => 'Delete permanently',
+        'Zurück' => 'Back',
+        'Seitendarstellung und Zugänge verwalten.' => 'Manage site appearance and access.',
+        'Seiteneinstellungen gespeichert.' => 'Site settings saved.',
+        'Allgemein' => 'General',
+        'Site Name' => 'Site name',
+        'Wird im Backend, im Seitentitel und in der Navigation verwendet.' => 'Used in the backend, page title and navigation.',
+        'Die Systemsprache gilt für Backend, öffentliche Seiten und Systemmeldungen. Weitere Sprachen können später über Sprachdateien ergänzt werden.' => 'The system language applies to the backend, public pages and system messages. More languages can be added later using language files.',
+        'Albumfarben aus dem Cover auf öffentlichen Seiten verwenden' => 'Use album colors from the cover on public pages',
+        'Ist die Funktion deaktiviert, wird die neutrale Glasdarstellung verwendet.' => 'When disabled, the neutral glass appearance is used.',
+        'Benutzerverwaltung' => 'User management',
+        'Benutzer hinzufügen' => 'Add user',
+        'Benutzername' => 'Username',
+        'Anzeigename' => 'Display name',
+        'Passwort' => 'Password',
+        'Rolle' => 'Role',
+        'Nutzer' => 'User',
+        'Benutzer anlegen' => 'Create user',
+        'Unverändert lassen' => 'Leave unchanged',
+        'Aktiv' => 'Active',
+        'Benutzer löschen' => 'Delete user',
+        'Erstellt:' => 'Created:',
+        'Updates und Backups' => 'Updates and backups',
+        'Updates' => 'Updates',
+        'Installierte Version' => 'Installed version',
+        'Verfügbare Version' => 'Available version',
+        'Update installieren' => 'Install update',
+        'Backup wiederherstellen' => 'Restore backup',
+        'Backup löschen' => 'Delete backup',
+        'Migrationsbackup erstellen' => 'Create migration backup',
+        'Migrationsbackup hochladen' => 'Upload migration backup',
+        'Herunterladen' => 'Download',
+        'Speichern' => 'Save',
+        'Abbrechen' => 'Cancel',
+        'Löschen' => 'Delete',
+        'Schließen' => 'Close',
+        'Bearbeiten' => 'Edit',
+        'Album herunterladen' => 'Download album',
+        'Teilen' => 'Share',
+        'Gesamtlaufzeit' => 'Total duration',
+        'Keine Alben vorhanden.' => 'No albums available.',
+        'Keine gelöschten Alben vorhanden.' => 'No deleted albums.',
+        'Album nicht gefunden.' => 'Album not found.',
+        'Keine Berechtigung.' => 'Permission denied.',
+        'MP3-Dateien auswählen' => 'Select MP3 files',
+        'MP3-Dateien hierher ziehen und ablegen' => 'Drag and drop MP3 files here',
+    ]);
+}
 function app_name(): string {
     global $config;
     return trim((string)get_setting('site_name', (string)($config['app']['name'] ?? 'Album Share'))) ?: 'Album Share';
@@ -168,18 +352,18 @@ function render_header(string $title, bool $admin = false): void {
     $app = e(app_name());
     $flashes = get_flashes();
     $searchValue = e(trim((string)($_GET['q'] ?? '')));
-    echo '<!doctype html><html lang="de"><head><script>(function(){var t=localStorage.getItem("musicshare-theme")||"auto";var d=t==="auto"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-bs-theme",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="'.base_url('assets/css/app.css?v=' . rawurlencode(APP_VERSION)).'"></head><body class="bg-body-tertiary">';
+    echo '<!doctype html><html lang="'.e(current_language()).'"><head><script>(function(){var t=localStorage.getItem("musicshare-theme")||"auto";var d=t==="auto"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-bs-theme",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="'.base_url('assets/css/app.css?v=' . rawurlencode(APP_VERSION)).'"></head><body class="bg-body-tertiary">';
     echo '<nav class="navbar navbar-expand-lg bg-dark navbar-dark admin-navbar"><div class="container">';
-    echo '<a class="navbar-brand d-flex align-items-center gap-3 me-lg-5" href="'.base_url($admin?'admin/index.php':'').'"><span class="brand-mark"><i class="bi bi-music-note-beamed"></i></span><span class="brand-copy"><span class="brand-title">'.$app.'</span><span class="brand-subtitle">Open Source Album Manager</span></span></a>';
+    echo '<a class="navbar-brand d-flex align-items-center gap-3 me-lg-5" href="'.base_url($admin?'admin/index.php':'').'"><span class="brand-mark"><i class="bi bi-music-note-beamed"></i></span><span class="brand-copy"><span class="brand-title">'.$app.'</span><span class="brand-subtitle">'.e(t('open_source_album_manager')).'</span></span></a>';
     if ($admin && is_logged_in()) {
-        echo '<button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar" aria-expanded="false" aria-label="Navigation öffnen"><span class="navbar-toggler-icon"></span></button>';
+        echo '<button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar" aria-expanded="false" aria-label="'.e(t('open_navigation')).'"><span class="navbar-toggler-icon"></span></button>';
         echo '<div class="collapse navbar-collapse" id="adminNavbar">';
-        echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" value="'.$searchValue.'" placeholder="Alben durchsuchen …" aria-label="Alben durchsuchen"></div></form>';
+        echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" value="'.$searchValue.'" placeholder="'.e(t('search_albums')).'" aria-label="'.e(t('search_albums')).'"></div></form>';
         echo '<div class="navbar-nav align-items-lg-center gap-lg-2 ms-lg-4">';
-        echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>Alben</a>';
-        if (is_admin()) { global $pdo; $trashCount=(int)$pdo->query("SELECT COUNT(*) FROM albums WHERE deleted_at IS NOT NULL")->fetchColumn(); if($trashCount>0){ echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>Papierkorb <span class="badge text-bg-secondary ms-1">'.$trashCount.'</span></a>'; } echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>Einstellungen</a>'; }
-        echo '<div class="dropdown"><button class="btn btn-sm btn-outline-light dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-circle-half me-2"></i>Erscheinungsbild</button><ul class="dropdown-menu dropdown-menu-end theme-menu"><li><button class="dropdown-item theme-option" type="button" data-theme="auto"><i class="bi bi-display me-2"></i>System<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="light"><i class="bi bi-sun me-2"></i>Hell<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="dark"><i class="bi bi-moon-stars me-2"></i>Dunkel<span class="theme-check ms-auto"></span></button></li></ul></div>';
-        echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'"><i class="bi bi-box-arrow-right me-2"></i>Abmelden</a>';
+        echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>'.e(t('albums')).'</a>';
+        if (is_admin()) { global $pdo; $trashCount=(int)$pdo->query("SELECT COUNT(*) FROM albums WHERE deleted_at IS NOT NULL")->fetchColumn(); if($trashCount>0){ echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>'.e(t('trash')).' <span class="badge text-bg-secondary ms-1">'.$trashCount.'</span></a>'; } echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>'.e(t('settings')).'</a>'; }
+        echo '<div class="dropdown"><button class="btn btn-sm btn-outline-light dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-circle-half me-2"></i>'.e(t('appearance')).'</button><ul class="dropdown-menu dropdown-menu-end theme-menu"><li><button class="dropdown-item theme-option" type="button" data-theme="auto"><i class="bi bi-display me-2"></i>'.e(t('system')).'<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="light"><i class="bi bi-sun me-2"></i>'.e(t('light')).'<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="dark"><i class="bi bi-moon-stars me-2"></i>'.e(t('dark')).'<span class="theme-check ms-auto"></span></button></li></ul></div>';
+        echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'"><i class="bi bi-box-arrow-right me-2"></i>'.e(t('logout')).'</a>';
         echo '</div></div>';
     }
     echo '</div></nav><main class="container py-4">';
@@ -189,8 +373,8 @@ function render_footer(): void {
     echo '</main>';
     if (is_admin_request()) {
         echo '<footer class="border-top bg-body py-3 mt-auto"><div class="container d-flex flex-wrap justify-content-between gap-2 small text-body-secondary">';
-        echo '<span>Version ' . e(APP_VERSION) . '</span><span><a class="text-body-secondary" href="' . e(APP_GITHUB_URL) . '" target="_blank" rel="noopener noreferrer"><i class="bi bi-github me-1"></i>GitHub</a>';
-        if (is_logged_in() && is_admin()) echo ' · <a class="text-body-secondary" href="' . base_url('admin/update.php') . '"><i class="bi bi-arrow-up-circle me-1"></i>Nach Updates suchen</a>';
+        echo '<span>' . e(t('version')) . ' ' . e(APP_VERSION) . '</span><span><a class="text-body-secondary" href="' . e(APP_GITHUB_URL) . '" target="_blank" rel="noopener noreferrer"><i class="bi bi-github me-1"></i>GitHub</a>';
+        if (is_logged_in() && is_admin()) echo ' · <a class="text-body-secondary" href="' . base_url('admin/update.php') . '"><i class="bi bi-arrow-up-circle me-1"></i>'.e(t('check_updates')).'</a>';
         echo '</span></div></footer>';
     }
     echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>';

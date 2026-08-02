@@ -4,6 +4,7 @@ return [
         'name' => 'Album Share',
         'base_url' => '',
         'timezone' => 'Europe/Berlin',
+        'language' => 'de',
         'max_upload_mb' => 500,
     ],
     'db' => [
