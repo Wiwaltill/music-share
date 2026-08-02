@@ -7,6 +7,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   const buttons=[...document.querySelectorAll('[data-play]')];
   let current=-1;
   let lastPositionUpdate=-1;
+  const stats=window.MusicShareStats||{};
+  function stat(type,trackId=0){
+    if(!stats.enabled||!stats.endpoint)return;
+    fetch(stats.endpoint,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',keepalive:true,body:JSON.stringify({type,track_id:Number(trackId)||0,token:stats.token||'',album_id:Number(stats.albumId)||0})}).catch(()=>{});
+  }
 
   const canPrevious=()=>current>0;
   const canNext=()=>current>=0&&current<buttons.length-1;
@@ -42,6 +47,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     requestAnimationFrame(()=>box.classList.add('show'));
     updateTrackButtons();
     updateMediaSession(btn);
+    stat('track_play',btn.closest('[data-row]')?.dataset.trackId||0);
     const promise=plyr?plyr.play():audio.play();
     if(promise&&typeof promise.catch==='function')promise.catch(()=>updateTrackButtons());
   }

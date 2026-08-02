@@ -54,6 +54,17 @@ function run_migrations(PDO $pdo): void {
             setting_value TEXT NULL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS statistics_daily (
+            event_date DATE NOT NULL,
+            album_id INT UNSIGNED NOT NULL,
+            share_id INT UNSIGNED NOT NULL DEFAULT 0,
+            track_id INT UNSIGNED NOT NULL DEFAULT 0,
+            event_type ENUM('album_view','track_play','track_download','album_download') NOT NULL,
+            event_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY(event_date,album_id,share_id,track_id,event_type),
+            KEY idx_stats_album_date(album_id,event_date),
+            KEY idx_stats_type_date(event_type,event_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     } catch (Throwable $e) {
         // Bestehende Installationen bleiben nutzbar, auch wenn der DB-Benutzer keine ALTER-Rechte besitzt.
     }

@@ -16,6 +16,7 @@ if($albumId>0){
 if(!$share){http_response_code(404);exit;}
 $s=$pdo->prepare('SELECT * FROM tracks WHERE album_id=? ORDER BY disc_no,track_no,id');
 $s->execute([$share['album_id']]);
+record_statistic('album_download',(int)$albumId,(int)($share['id']??0));
 $tracks=$s->fetchAll();
 $tmp=tempnam(sys_get_temp_dir(),'album_');
 $zip=new ZipArchive();

@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($siteName === '') $siteName = 'Album Share';
         set_setting('site_name', mb_substr($siteName, 0, 120));
         set_setting('album_colors_enabled', isset($_POST['album_colors_enabled']) ? '1' : '0');
+        set_setting('statistics_enabled', isset($_POST['statistics_enabled']) ? '1' : '0');
         $language = (string)($_POST['language'] ?? 'de');
         if (!array_key_exists($language, supported_languages())) $language = 'de';
         set_setting('language', $language);
@@ -96,7 +97,7 @@ render_header(t('page.settings.title'), true);
           </select>
           <div class="form-text"><?=e(t('text.die.systemsprache.gilt.fur.backend.offentliche.seiten.und.systemmeldungen'))?></div>
         </div><div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" role="switch" id="album_colors_enabled" name="album_colors_enabled" <?=get_setting('album_colors_enabled','0')==='1'?'checked':''?>> <label class="form-check-label" for="album_colors_enabled"><?=e(t('text.albumfarben.aus.dem.cover.auf.offentlichen.seiten.verwenden'))?></label></div><div class="form-text"><?=e(t('text.ist.die.funktion.deaktiviert.wird.die.neutrale.glasdarstellung.verwendet'))?></div>
-        <button class="btn btn-primary mt-3"><?=e(t('text.speichern'))?></button>
+        <div class="form-check form-switch mt-4"><input class="form-check-input" type="checkbox" role="switch" id="statistics_enabled" name="statistics_enabled" <?=statistics_enabled()?'checked':''?>> <label class="form-check-label" for="statistics_enabled"><?=e(t('stats.enable'))?></label></div><div class="form-text"><?=e(t('stats.privacy_help'))?></div><button class="btn btn-primary mt-3"><?=e(t('text.speichern'))?></button>
       </form>
     </div></div>
   </div>

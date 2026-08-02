@@ -74,6 +74,26 @@ function set_setting(string $key, string $value): void {
     $stmt->execute([$key,$value]);
 }
 
+function statistics_enabled(): bool { return get_setting('statistics_enabled','0') === '1'; }
+function record_statistic(string $type, int $albumId, int $shareId = 0, int $trackId = 0): void {
+    global $pdo;
+    if (!statistics_enabled() || $albumId < 1) return;
+    if (!in_array($type, ['album_view','track_play','track_download','album_download'], true)) return;
+    try {
+        $stmt=$pdo->prepare("INSERT INTO statistics_daily(event_date,album_id,share_id,track_id,event_type,event_count) VALUES(CURDATE(),?,?,?,?,1) ON DUPLICATE KEY UPDATE event_count=event_count+1");
+        $stmt->execute([$albumId,max(0,$shareId),max(0,$trackId),$type]);
+    } catch (Throwable $e) {}
+}
+function statistics_album_totals(int $albumId, int $days = 0): array {
+    global $pdo;
+    $where='album_id=?'; $args=[$albumId];
+    if($days>0){$where.=' AND event_date>=DATE_SUB(CURDATE(),INTERVAL ? DAY)';$args[]=$days-1;}
+    $stmt=$pdo->prepare("SELECT event_type,SUM(event_count) total FROM statistics_daily WHERE {$where} GROUP BY event_type");
+    $stmt->execute($args); $out=['album_view'=>0,'track_play'=>0,'track_download'=>0,'album_download'=>0];
+    foreach($stmt->fetchAll() as $r)$out[$r['event_type']]=(int)$r['total'];
+    return $out;
+}
+
 function supported_languages(): array {
     return ['de' => 'Deutsch', 'en' => 'English', 'fr' => 'Français'];
 }
