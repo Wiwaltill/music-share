@@ -22,7 +22,7 @@ function current_user(): ?array {
     if (!is_logged_in()) return null;
     static $user = null;
     if ($user === null) {
-        $stmt = $pdo->prepare('SELECT id,username,display_name,role,is_active FROM users WHERE id=?');
+        $stmt = $pdo->prepare('SELECT id,username,email,role,is_active FROM users WHERE id=?');
         $stmt->execute([(int)$_SESSION['user_id']]);
         $user = $stmt->fetch() ?: false;
         if (!$user || !(int)$user['is_active']) { unset($_SESSION['user_id']); return null; }
@@ -72,6 +72,110 @@ function set_setting(string $key, string $value): void {
     global $pdo;
     $stmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value) VALUES(?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
     $stmt->execute([$key,$value]);
+}
+
+
+function smtp_read_response($socket): string {
+    $response = '';
+    while (($line = fgets($socket, 515)) !== false) {
+        $response .= $line;
+        if (strlen($line) < 4 || $line[3] === ' ') break;
+    }
+    return $response;
+}
+function smtp_expect($socket, array $codes): string {
+    $response = smtp_read_response($socket);
+    $code = (int)substr($response, 0, 3);
+    if (!in_array($code, $codes, true)) throw new RuntimeException('SMTP: ' . trim($response));
+    return $response;
+}
+function smtp_command($socket, string $command, array $codes): string {
+    fwrite($socket, $command . "\r\n");
+    return smtp_expect($socket, $codes);
+}
+function send_system_mail(string $to, string $subject, string $html): bool {
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
+    $fromEmail = trim((string)get_setting('mail_from_email', ''));
+    $fromName = trim((string)get_setting('mail_from_name', app_name()));
+    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) return false;
+
+    $plain = trim(html_entity_decode(strip_tags(preg_replace('/<br\s*\/?>/i', "\n", $html)), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+    $boundary = 'b_' . bin2hex(random_bytes(12));
+    $headers = [
+        'From: ' . sprintf('"%s" <%s>', str_replace(['"', "\r", "\n"], '', $fromName), $fromEmail),
+        'Reply-To: ' . $fromEmail,
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
+    ];
+    $body = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{$plain}\r\n";
+    $body .= "--{$boundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{$html}\r\n--{$boundary}--\r\n";
+
+    $method = (string)get_setting('mail_method', 'mail');
+    if ($method === 'mail') {
+        return @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, implode("\r\n", $headers));
+    }
+
+    $host = trim((string)get_setting('smtp_host', ''));
+    $port = (int)get_setting('smtp_port', '587');
+    $encryption = (string)get_setting('smtp_encryption', 'tls');
+    $username = (string)get_setting('smtp_username', '');
+    $password = (string)get_setting('smtp_password', '');
+    if ($host === '' || $port < 1) return false;
+
+    $remote = ($encryption === 'ssl' ? 'ssl://' : '') . $host . ':' . $port;
+    $socket = @stream_socket_client($remote, $errno, $errstr, 15, STREAM_CLIENT_CONNECT);
+    if (!$socket) throw new RuntimeException("SMTP connection failed: {$errstr}");
+    stream_set_timeout($socket, 15);
+    try {
+        smtp_expect($socket, [220]);
+        smtp_command($socket, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), [250]);
+        if ($encryption === 'tls') {
+            smtp_command($socket, 'STARTTLS', [220]);
+            if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                throw new RuntimeException('SMTP TLS failed.');
+            }
+            smtp_command($socket, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), [250]);
+        }
+        if ($username !== '') {
+            smtp_command($socket, 'AUTH LOGIN', [334]);
+            smtp_command($socket, base64_encode($username), [334]);
+            smtp_command($socket, base64_encode($password), [235]);
+        }
+        smtp_command($socket, 'MAIL FROM:<' . $fromEmail . '>', [250]);
+        smtp_command($socket, 'RCPT TO:<' . $to . '>', [250, 251]);
+        smtp_command($socket, 'DATA', [354]);
+        $message = 'To: <' . $to . ">\r\nSubject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n" . implode("\r\n", $headers) . "\r\n\r\n" . $body;
+        $message = preg_replace('/^\./m', '..', $message);
+        fwrite($socket, $message . "\r\n.\r\n");
+        smtp_expect($socket, [250]);
+        smtp_command($socket, 'QUIT', [221]);
+        return true;
+    } finally {
+        fclose($socket);
+    }
+}
+function create_password_reset(int $userId): string {
+    global $pdo;
+    $pdo->prepare('DELETE FROM password_reset_tokens WHERE user_id=? OR expires_at<NOW() OR used_at IS NOT NULL')->execute([$userId]);
+    $token = bin2hex(random_bytes(32));
+    $hash = hash('sha256', $token);
+    $stmt = $pdo->prepare('INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES(?,?,DATE_ADD(NOW(),INTERVAL 60 MINUTE))');
+    $stmt->execute([$userId,$hash]);
+    return $token;
+}
+function password_reset_user(string $token): ?array {
+    global $pdo;
+    if (!preg_match('/^[a-f0-9]{64}$/', $token)) return null;
+    $stmt=$pdo->prepare('SELECT pr.id token_id,u.id,u.username,u.email FROM password_reset_tokens pr JOIN users u ON u.id=pr.user_id WHERE pr.token_hash=? AND pr.used_at IS NULL AND pr.expires_at>NOW() AND u.is_active=1 LIMIT 1');
+    $stmt->execute([hash('sha256',$token)]);
+    return $stmt->fetch() ?: null;
+}
+function password_reset_mail_html(string $name, string $url): string {
+    return '<p>' . e(t('password_reset.hello', replace:['name'=>$name])) . '</p>'
+        . '<p>' . e(t('password_reset.request_text')) . '</p>'
+        . '<p><a href="' . e($url) . '" style="display:inline-block;padding:12px 18px;background:#0d6efd;color:#fff;text-decoration:none;border-radius:6px">' . e(t('password_reset.button')) . '</a></p>'
+        . '<p>' . e(t('password_reset.expires')) . '</p>'
+        . '<p style="color:#666">' . e($url) . '</p>';
 }
 
 function statistics_enabled(): bool { return get_setting('statistics_enabled','0') === '1'; }

@@ -19,20 +19,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/settings.php');
     }
 
+
+    if ($action === 'mail') {
+        $method = ($_POST['mail_method'] ?? 'mail') === 'smtp' ? 'smtp' : 'mail';
+        $enc = in_array(($_POST['smtp_encryption'] ?? 'tls'), ['none','tls','ssl'], true) ? (string)$_POST['smtp_encryption'] : 'tls';
+        set_setting('mail_method',$method);
+        set_setting('mail_from_name',trim((string)($_POST['mail_from_name'] ?? app_name())));
+        set_setting('mail_from_email',strtolower(trim((string)($_POST['mail_from_email'] ?? ''))));
+        set_setting('smtp_host',trim((string)($_POST['smtp_host'] ?? '')));
+        set_setting('smtp_port',(string)max(1,(int)($_POST['smtp_port'] ?? 587)));
+        set_setting('smtp_encryption',$enc);
+        set_setting('smtp_username',trim((string)($_POST['smtp_username'] ?? '')));
+        if (trim((string)($_POST['smtp_password'] ?? '')) !== '') set_setting('smtp_password',(string)$_POST['smtp_password']);
+        flash('success',t('mail.saved'));
+        redirect('admin/settings.php#mail');
+    }
+    if ($action === 'test_mail') {
+        $to = strtolower(trim((string)($_POST['test_email'] ?? '')));
+        try {
+            if (!send_system_mail($to,t('mail.test_subject'),'<p>'.e(t('mail.test_body')).'</p>')) throw new RuntimeException(t('mail.send_failed'));
+            flash('success',t('mail.test_sent'));
+        } catch (Throwable $e) { flash('danger',$e->getMessage()); }
+        redirect('admin/settings.php#mail');
+    }
+
     if ($action === 'create_user') {
         $username = trim((string)($_POST['username'] ?? ''));
-        $displayName = trim((string)($_POST['display_name'] ?? ''));
+        $email = strtolower(trim((string)($_POST['email'] ?? '')));
         $password = (string)($_POST['password'] ?? '');
         $role = ($_POST['role'] ?? 'user') === 'admin' ? 'admin' : 'user';
-        if ($username === '' || strlen($password) < 8) {
-            flash('danger', 'Benutzername und ein Passwort mit mindestens 8 Zeichen sind erforderlich.');
+        if ($username === '' || !filter_var($email,FILTER_VALIDATE_EMAIL) || strlen($password) < 8) {
+            flash('danger', t('user.validation_create'));
         } else {
             try {
-                $stmt = $pdo->prepare('INSERT INTO users(username,display_name,password_hash,role,is_active) VALUES(?,?,?,?,1)');
-                $stmt->execute([$username,$displayName,password_hash($password,PASSWORD_DEFAULT),$role]);
+                $stmt = $pdo->prepare('INSERT INTO users(username,email,password_hash,role,is_active) VALUES(?,?,?,?,1)');
+                $stmt->execute([$username,$email,password_hash($password,PASSWORD_DEFAULT),$role]);
                 flash('success', 'Benutzer wurde angelegt.');
             } catch (PDOException $e) {
-                flash('danger', 'Der Benutzername ist bereits vergeben.');
+                flash('danger', t('user.duplicate'));
             }
         }
         redirect('admin/settings.php#users');
@@ -40,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update_user') {
         $id = (int)($_POST['user_id'] ?? 0);
-        $displayName = trim((string)($_POST['display_name'] ?? ''));
+        $email = strtolower(trim((string)($_POST['email'] ?? '')));
         $role = ($_POST['role'] ?? 'user') === 'admin' ? 'admin' : 'user';
         $active = isset($_POST['is_active']) ? 1 : 0;
         $password = (string)($_POST['password'] ?? '');
@@ -48,16 +72,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('danger', 'Das eigene aktive Administratorkonto kann nicht deaktiviert oder herabgestuft werden.');
             redirect('admin/settings.php#users');
         }
+        if (!filter_var($email,FILTER_VALIDATE_EMAIL)) {
+            flash('danger', t('user.invalid_email'));
+            redirect('admin/settings.php#users');
+        }
         if ($password !== '' && strlen($password) < 8) {
             flash('danger', 'Ein neues Passwort muss mindestens 8 Zeichen lang sein.');
             redirect('admin/settings.php#users');
         }
         if ($password !== '') {
-            $stmt=$pdo->prepare('UPDATE users SET display_name=?,role=?,is_active=?,password_hash=? WHERE id=?');
-            $stmt->execute([$displayName,$role,$active,password_hash($password,PASSWORD_DEFAULT),$id]);
+            $stmt=$pdo->prepare('UPDATE users SET email=?,role=?,is_active=?,password_hash=? WHERE id=?');
+            $stmt->execute([$email,$role,$active,password_hash($password,PASSWORD_DEFAULT),$id]);
         } else {
-            $stmt=$pdo->prepare('UPDATE users SET display_name=?,role=?,is_active=? WHERE id=?');
-            $stmt->execute([$displayName,$role,$active,$id]);
+            $stmt=$pdo->prepare('UPDATE users SET email=?,role=?,is_active=? WHERE id=?');
+            $stmt->execute([$email,$role,$active,$id]);
         }
         flash('success', 'Benutzer wurde aktualisiert.');
         redirect('admin/settings.php#users');
@@ -76,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$users = $pdo->query('SELECT id,username,display_name,role,is_active,created_at FROM users ORDER BY username')->fetchAll();
+$users = $pdo->query('SELECT id,username,email,role,is_active,created_at FROM users ORDER BY username')->fetchAll();
 render_header(t('page.settings.title'), true);
 ?>
 <div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1"><?=e(t('page.settings.title'))?></h1><p class="text-body-secondary mb-0"><?=e(t('text.seitendarstellung.und.zugange.verwalten'))?></p></div><a class="btn btn-outline-primary" href="update.php"><?=e(t('text.updates'))?></a></div>
@@ -101,13 +129,38 @@ render_header(t('page.settings.title'), true);
       </form>
     </div></div>
   </div>
-  <div class="col-lg-7" id="users">
+  
+  <div class="col-12" id="mail">
+    <div class="card shadow-sm mb-4"><div class="card-body p-4">
+      <h2 class="h5"><?=e(t('mail.settings'))?></h2>
+      <p class="text-body-secondary"><?=e(t('mail.settings_help'))?></p>
+      <form method="post" class="row g-3">
+        <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="mail">
+        <div class="col-md-3"><label class="form-label"><?=e(t('mail.method'))?></label><select class="form-select" name="mail_method"><option value="mail" <?=get_setting('mail_method','mail')==='mail'?'selected':''?>>PHP mail()</option><option value="smtp" <?=get_setting('mail_method','mail')==='smtp'?'selected':''?>>SMTP</option></select></div>
+        <div class="col-md-4"><label class="form-label"><?=e(t('mail.from_name'))?></label><input class="form-control" name="mail_from_name" value="<?=e(get_setting('mail_from_name',app_name()))?>"></div>
+        <div class="col-md-5"><label class="form-label"><?=e(t('mail.from_email'))?></label><input type="email" class="form-control" name="mail_from_email" value="<?=e(get_setting('mail_from_email',''))?>" required></div>
+        <div class="col-md-5"><label class="form-label"><?=e(t('mail.smtp_host'))?></label><input class="form-control" name="smtp_host" value="<?=e(get_setting('smtp_host',''))?>"></div>
+        <div class="col-md-2"><label class="form-label"><?=e(t('mail.smtp_port'))?></label><input type="number" min="1" max="65535" class="form-control" name="smtp_port" value="<?=e(get_setting('smtp_port','587'))?>"></div>
+        <div class="col-md-2"><label class="form-label"><?=e(t('mail.encryption'))?></label><select class="form-select" name="smtp_encryption"><?php foreach(['none'=>'–','tls'=>'STARTTLS','ssl'=>'SSL/TLS'] as $k=>$v):?><option value="<?=$k?>" <?=get_setting('smtp_encryption','tls')===$k?'selected':''?>><?=$v?></option><?php endforeach?></select></div>
+        <div class="col-md-3"><label class="form-label"><?=e(t('mail.smtp_username'))?></label><input class="form-control" name="smtp_username" value="<?=e(get_setting('smtp_username',''))?>"></div>
+        <div class="col-md-4"><label class="form-label"><?=e(t('mail.smtp_password'))?></label><input type="password" class="form-control" name="smtp_password" placeholder="<?=e(t('text.unverandert.lassen'))?>"></div>
+        <div class="col-12"><button class="btn btn-primary"><?=e(t('text.speichern'))?></button></div>
+      </form>
+      <hr>
+      <form method="post" class="row g-2 align-items-end">
+        <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="test_mail">
+        <div class="col-md-6"><label class="form-label"><?=e(t('mail.test_recipient'))?></label><input type="email" class="form-control" name="test_email" required></div>
+        <div class="col-md-auto"><button class="btn btn-outline-primary"><?=e(t('mail.send_test'))?></button></div>
+      </form>
+    </div></div>
+  </div>
+<div class="col-lg-7" id="users">
     <div class="card shadow-sm mb-4"><div class="card-body p-4">
       <h2 class="h5"><?=e(t('text.benutzer.hinzufugen'))?></h2>
       <form method="post" class="row g-3">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="create_user">
         <div class="col-md-6"><label class="form-label"><?=e(t('text.benutzername'))?></label><input class="form-control" name="username" required></div>
-        <div class="col-md-6"><label class="form-label"><?=e(t('text.anzeigename'))?></label><input class="form-control" name="display_name"></div>
+        <div class="col-md-6"><label class="form-label"><?=e(t('user.email'))?></label><input type="email" class="form-control" name="email" required></div>
         <div class="col-md-6"><label class="form-label"><?=e(t('text.passwort'))?></label><input type="password" class="form-control" name="password" minlength="8" required></div>
         <div class="col-md-6"><label class="form-label"><?=e(t('text.rolle'))?></label><select class="form-select" name="role"><option value="user"><?=e(t('text.nutzer'))?></option><option value="admin">Administrator</option></select></div>
         <div class="col-12"><button class="btn btn-primary"><?=e(t('text.benutzer.anlegen'))?></button></div>
@@ -118,7 +171,7 @@ render_header(t('page.settings.title'), true);
       <form method="post" class="row g-3 align-items-end">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="update_user"><input type="hidden" name="user_id" value="<?=$u['id']?>">
         <div class="col-md-4"><label class="form-label"><?=e(t('text.benutzername'))?></label><input class="form-control" value="<?=e($u['username'])?>" disabled></div>
-        <div class="col-md-4"><label class="form-label"><?=e(t('text.anzeigename'))?></label><input class="form-control" name="display_name" value="<?=e($u['display_name'])?>"></div>
+        <div class="col-md-4"><label class="form-label"><?=e(t('user.email'))?></label><input type="email" class="form-control" name="email" value="<?=e($u['email']??'')?>" required></div>
         <div class="col-md-4"><label class="form-label"><?=e(t('text.rolle'))?></label><select class="form-select" name="role"><option value="user" <?=$u['role']==='user'?'selected':''?>><?=e(t('text.nutzer'))?></option><option value="admin" <?=$u['role']==='admin'?'selected':''?>>Administrator</option></select></div>
         <div class="col-md-5"><label class="form-label"><?=e(t('text.neues.passwort'))?></label><input type="password" class="form-control" name="password" minlength="8" placeholder="<?=e(t('text.unverandert.lassen'))?>"></div>
         <div class="col-md-3"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="is_active" id="active<?=$u['id']?>" <?=$u['is_active']?'checked':''?>><label class="form-check-label" for="active<?=$u['id']?>"><?=e(t('text.aktiv'))?></label></div></div>

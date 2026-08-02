@@ -15,6 +15,10 @@ function run_migrations(PDO $pdo): void {
         if (!in_array('display_name', $userCols, true)) {
             $pdo->exec("ALTER TABLE users ADD COLUMN display_name VARCHAR(150) NOT NULL DEFAULT '' AFTER username");
         }
+        if (!in_array('email', $userCols, true)) {
+            $pdo->exec("ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL AFTER username");
+            try { $pdo->exec("ALTER TABLE users ADD UNIQUE KEY uq_users_email(email)"); } catch (Throwable $e) {}
+        }
         if (!in_array('role', $userCols, true)) {
             $pdo->exec("ALTER TABLE users ADD COLUMN role ENUM('admin','user') NOT NULL DEFAULT 'user' AFTER password_hash");
             $pdo->exec("UPDATE users SET role='admin' ORDER BY id ASC LIMIT 1");
@@ -64,6 +68,17 @@ function run_migrations(PDO $pdo): void {
             PRIMARY KEY(event_date,album_id,share_id,track_id,event_type),
             KEY idx_stats_album_date(album_id,event_date),
             KEY idx_stats_type_date(event_type,event_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            token_hash CHAR(64) NOT NULL UNIQUE,
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_password_reset_user(user_id),
+            KEY idx_password_reset_expiry(expires_at),
+            CONSTRAINT fk_password_reset_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     } catch (Throwable $e) {
         // Bestehende Installationen bleiben nutzbar, auch wenn der DB-Benutzer keine ALTER-Rechte besitzt.

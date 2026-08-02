@@ -18,7 +18,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     elseif($action==='purge'){purge_album_files($pdo,$id);flash('success','Album wurde endgültig gelöscht.');}
     redirect('admin/trash.php');
 }
-$albums=$pdo->query("SELECT a.*,u.username,u.display_name,DATEDIFF(DATE_ADD(a.deleted_at,INTERVAL 30 DAY),NOW()) days_left FROM albums a LEFT JOIN users u ON u.id=a.owner_user_id WHERE a.deleted_at IS NOT NULL ORDER BY a.deleted_at DESC")->fetchAll();
+$albums=$pdo->query("SELECT a.*,u.username,u.email,DATEDIFF(DATE_ADD(a.deleted_at,INTERVAL 30 DAY),NOW()) days_left FROM albums a LEFT JOIN users u ON u.id=a.owner_user_id WHERE a.deleted_at IS NOT NULL ORDER BY a.deleted_at DESC")->fetchAll();
 render_header(t('nav.trash'),true);
 ?>
 <div class="d-flex justify-content-between align-items-center mb-4"><div><h1 class="h2 mb-1"><?=e(t('nav.trash'))?></h1><p class="text-body-secondary mb-0"><?=e(t('text.alben.werden.nach.30.tagen.automatisch.endgultig.geloscht'))?></p></div><a class="btn btn-outline-secondary" href="index.php"><?=e(t('text.zuruck'))?></a></div>
