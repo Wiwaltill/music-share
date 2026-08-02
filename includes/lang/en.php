@@ -55,6 +55,7 @@ return [
     'installer.admin_password_min' => 'The administrator password must contain at least 8 characters.',
     'language' => 'Language',
     'light' => 'Light',
+    'login.username_or_email' => 'Username or email address',
     'logout' => 'Log out',
     'mail.encryption' => 'Encryption',
     'mail.from_email' => 'Sender email',

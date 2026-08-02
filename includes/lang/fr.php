@@ -55,6 +55,7 @@ return [
     'installer.admin_password_min' => 'Le mot de passe administrateur doit contenir au moins 8 caractères.',
     'language' => 'Langue',
     'light' => 'Clair',
+    'login.username_or_email' => 'Nom d’utilisateur ou adresse e-mail',
     'logout' => 'Se déconnecter',
     'mail.encryption' => 'Chiffrement',
     'mail.from_email' => 'E-mail de l’expéditeur',

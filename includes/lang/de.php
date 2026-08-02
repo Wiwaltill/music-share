@@ -55,6 +55,7 @@ return [
     'installer.admin_password_min' => 'Das Administrator-Passwort muss mindestens 8 Zeichen lang sein.',
     'language' => 'Sprache',
     'light' => 'Hell',
+    'login.username_or_email' => 'Benutzername oder E-Mail-Adresse',
     'logout' => 'Abmelden',
     'mail.encryption' => 'Verschlüsselung',
     'mail.from_email' => 'Absender-E-Mail',
