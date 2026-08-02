@@ -11,14 +11,14 @@ try {
 
     $rawIds = json_decode((string)($_POST['ids'] ?? '[]'), true, 32, JSON_THROW_ON_ERROR);
     if (!is_array($rawIds)) {
-        throw new RuntimeException('Ungültige Titelauswahl.');
+        throw new RuntimeException(t('track.invalid_selection'));
     }
     $ids = array_values(array_unique(array_filter(array_map('intval', $rawIds), static fn(int $id): bool => $id > 0)));
     if (!$ids) {
-        throw new RuntimeException('Keine Titel ausgewählt.');
+        throw new RuntimeException(t('track.none_selected'));
     }
     if (count($ids) > 500) {
-        throw new RuntimeException('Es können höchstens 500 Titel gleichzeitig gelöscht werden.');
+        throw new RuntimeException(t('track.max_bulk_delete'));
     }
 
     $placeholders = implode(',', array_fill(0, count($ids), '?'));
@@ -27,7 +27,7 @@ try {
     $stmt->execute($params);
     $tracks = $stmt->fetchAll();
     if (count($tracks) !== count($ids)) {
-        throw new RuntimeException('Mindestens ein ausgewählter Titel gehört nicht zu diesem Album oder existiert nicht mehr.');
+        throw new RuntimeException(t('track.selection_mismatch'));
     }
 
     $pdo->beginTransaction();

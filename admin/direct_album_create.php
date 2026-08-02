@@ -5,7 +5,7 @@ header('Content-Type: application/json; charset=utf-8');
 try {
     verify_csrf();
     $title = trim((string)($_POST['title'] ?? ''));
-    if ($title === '') throw new RuntimeException('Kein Albumtitel in den MP3-Tags gefunden.');
+    if ($title === '') throw new RuntimeException(t('album.no_title_in_tags'));
     $artist = trim((string)($_POST['artist'] ?? ''));
     $albumArtist = trim((string)($_POST['album_artist'] ?? ''));
     $year = max(0, (int)($_POST['release_year'] ?? 0));

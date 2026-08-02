@@ -254,7 +254,7 @@ const msT=window.msT||((key,fallback)=>fallback??key);
 
     if (pendingAlbumTitles.size) {
       const [candidate] = [...pendingAlbumTitles.entries()].sort((a, b) => b[1] - a[1])[0];
-      const accept = await MusicShareDialog.confirm(`Alle Titel wurden hochgeladen. Im MP3-Tag wurde der Albumtitel „${candidate}“ gefunden. Soll der bisherige Albumtitel „${cfg.currentAlbumTitle}“ ersetzt werden?`, {title: msT('text.albumtitel.ubernehmen', 'Albumtitel übernehmen?'), confirmText: msT('text.titel.ersetzen', 'Titel ersetzen'), variant: "primary"});
+      const accept = await MusicShareDialog.confirm(msT('upload.album_title_prompt').replace('{candidate}', candidate).replace('{current}', cfg.currentAlbumTitle), {title: msT('text.albumtitel.ubernehmen', 'Albumtitel übernehmen?'), confirmText: msT('text.titel.ersetzen', 'Titel ersetzen'), variant: "primary"});
       try {
         await postDecision(cfg.albumTitleCandidateUrl, {title: candidate, accept: accept ? '1' : '0'});
         if (accept) {
@@ -268,7 +268,7 @@ const msT=window.msT||((key,fallback)=>fallback??key);
 
     if (pendingCoverCandidates.length) {
       const first = pendingCoverCandidates[0];
-      const accept = await MusicShareDialog.confirm('Alle Titel wurden hochgeladen. In einer MP3 wurde ein Cover gefunden. Möchtest du es als Albumcover übernehmen?', {title: msT('text.cover.ubernehmen.fb0ba6', 'Cover übernehmen?'), confirmText: msT('text.cover.ubernehmen', 'Cover übernehmen'), variant: 'primary'});
+      const accept = await MusicShareDialog.confirm(msT('upload.cover_prompt'), {title: msT('text.cover.ubernehmen.fb0ba6', 'Cover übernehmen?'), confirmText: msT('text.cover.ubernehmen', 'Cover übernehmen'), variant: 'primary'});
       try {
         await postDecision(cfg.coverCandidateUrl, {file: first, accept: accept ? '1' : '0'});
         for (const extra of pendingCoverCandidates.slice(1)) {
@@ -368,7 +368,7 @@ const msT=window.msT||((key,fallback)=>fallback??key);
   bulkDeleteTracks?.addEventListener('click', async () => {
     const rows = selectedRows();
     if (!rows.length) return;
-    if (!await MusicShareDialog.confirm(`${rows.length} ausgewählte Titel wirklich dauerhaft löschen?`, {confirmText: msT('text.titel.loschen', 'Titel löschen'), variant: 'danger'})) return;
+    if (!await MusicShareDialog.confirm(msT('upload.bulk_delete_prompt').replace('{count}', rows.length), {confirmText: msT('text.titel.loschen', 'Titel löschen'), variant: 'danger'})) return;
     const fd = new FormData();
     fd.append('csrf', cfg.csrf);
     fd.append('album_id', cfg.albumId);

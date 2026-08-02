@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $adminPassword = (string)($_POST['admin_pass'] ?? '');
             if (strlen($adminPassword) < 8) {
-                throw new RuntimeException('Das Administrator-Passwort muss mindestens 8 Zeichen lang sein.');
+                throw new RuntimeException($itxt['admin_password_min']);
             }
 
             $dsn = sprintf(

@@ -180,14 +180,14 @@ function upload_file(array $file, string $targetDir, array $allowedMime, int $ma
         };
         throw new RuntimeException($message);
     }
-    if (($file['size'] ?? 0) > $maxBytes) throw new RuntimeException('Datei ist zu groß.');
+    if (($file['size'] ?? 0) > $maxBytes) throw new RuntimeException(t('common.file_too_large'));
     $finfo = new finfo(FILEINFO_MIME_TYPE);
     $mime = $finfo->file($file['tmp_name']);
     if (!in_array($mime, $allowedMime, true)) throw new RuntimeException('Dateityp nicht erlaubt: ' . $mime);
     $extMap = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','audio/mpeg'=>'mp3','audio/wav'=>'wav','audio/x-wav'=>'wav','audio/flac'=>'flac','audio/mp4'=>'m4a','audio/x-m4a'=>'m4a','audio/ogg'=>'ogg'];
     $ext = $extMap[$mime] ?? strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
     $name = bin2hex(random_bytes(16)) . '.' . $ext;
-    if (!move_uploaded_file($file['tmp_name'], rtrim($targetDir, '/') . '/' . $name)) throw new RuntimeException('Datei konnte nicht gespeichert werden.');
+    if (!move_uploaded_file($file['tmp_name'], rtrim($targetDir, '/') . '/' . $name)) throw new RuntimeException(t('common.file_save_failed'));
     return $name;
 }
 function render_header(string $title, bool $admin = false): void {
@@ -363,7 +363,7 @@ function download_remote_file(string $url, string $target): void {
         }
         if ($contentType !== '' && str_contains(strtolower($contentType), 'application/json')) {
             @unlink($target);
-            throw new RuntimeException('GitHub hat statt der ZIP-Datei eine API-Antwort geliefert.');
+            throw new RuntimeException(t('update.api_instead_zip'));
         }
     } else {
         fclose($out);
@@ -396,7 +396,7 @@ function download_remote_file(string $url, string $target): void {
     $signature = (string)@file_get_contents($target, false, null, 0, 4);
     if ($signature !== "PK\x03\x04" && $signature !== "PK\x05\x06" && $signature !== "PK\x07\x08") {
         @unlink($target);
-        throw new RuntimeException('Die heruntergeladene Datei ist kein gültiges ZIP-Archiv.');
+        throw new RuntimeException(t('update.invalid_zip'));
     }
 }
 
@@ -419,10 +419,10 @@ function recursive_copy_update(string $source, string $destination, array $prote
 function create_application_backup(string $root): string {
     if (!class_exists(ZipArchive::class)) throw new RuntimeException('Für Updates wird die PHP-Erweiterung ZipArchive benötigt.');
     $backupDir = $root . '/storage/backups';
-    if (!is_dir($backupDir) && !mkdir($backupDir, 0775, true) && !is_dir($backupDir)) throw new RuntimeException('Backup-Verzeichnis ist nicht beschreibbar.');
+    if (!is_dir($backupDir) && !mkdir($backupDir, 0775, true) && !is_dir($backupDir)) throw new RuntimeException(t('backup.dir_not_writable'));
     $file = $backupDir . '/before-update-' . APP_VERSION . '-' . date('Ymd-His') . '.zip';
     $zip = new ZipArchive();
-    if ($zip->open($file, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) throw new RuntimeException('Backup konnte nicht erstellt werden.');
+    if ($zip->open($file, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) throw new RuntimeException(t('backup.create_failed'));
     $skip = ['uploads', 'storage', '.git'];
     $items = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
     foreach ($items as $item) {
@@ -440,11 +440,11 @@ function restore_application_backup(string $root, string $backupName): void {
     if (!class_exists(ZipArchive::class)) throw new RuntimeException('ZipArchive ist nicht verfügbar.');
     $safe = basename($backupName);
     $file = $root . '/storage/backups/' . $safe;
-    if (!is_file($file) || !str_ends_with(strtolower($safe), '.zip')) throw new RuntimeException('Backup wurde nicht gefunden.');
+    if (!is_file($file) || !str_ends_with(strtolower($safe), '.zip')) throw new RuntimeException(t('backup.not_found'));
     $zip = new ZipArchive();
-    if ($zip->open($file) !== true) throw new RuntimeException('Backup konnte nicht geöffnet werden.');
+    if ($zip->open($file) !== true) throw new RuntimeException(t('backup.open_failed'));
     $tmp = $root . '/storage/restore-' . bin2hex(random_bytes(5));
-    if (!mkdir($tmp, 0775, true) || !$zip->extractTo($tmp)) throw new RuntimeException('Backup konnte nicht entpackt werden.');
+    if (!mkdir($tmp, 0775, true) || !$zip->extractTo($tmp)) throw new RuntimeException(t('backup.extract_failed'));
     $zip->close();
     recursive_copy_update($tmp, $root, ['config.php','uploads','storage','.git']);
 }
@@ -470,14 +470,14 @@ function remove_directory_tree(string $path): void {
 
 function validate_backup_archive(string $file): array {
     if (!class_exists(ZipArchive::class)) throw new RuntimeException('ZipArchive ist nicht verfügbar.');
-    if (!is_file($file) || !str_ends_with(strtolower($file), '.zip')) throw new RuntimeException('Die Backupdatei ist ungültig.');
+    if (!is_file($file) || !str_ends_with(strtolower($file), '.zip')) throw new RuntimeException(t('backup.invalid'));
     $zip = new ZipArchive();
-    if ($zip->open($file) !== true) throw new RuntimeException('Das Backup-ZIP konnte nicht geöffnet werden.');
+    if ($zip->open($file) !== true) throw new RuntimeException(t('backup.zip_open_failed'));
     for ($i = 0; $i < $zip->numFiles; $i++) {
         $name = str_replace('\\', '/', (string)$zip->getNameIndex($i));
         if ($name === '' || str_starts_with($name, '/') || preg_match('~(^|/)\.\.(/|$)~', $name)) {
             $zip->close();
-            throw new RuntimeException('Das Backup enthält einen unsicheren Dateipfad.');
+            throw new RuntimeException(t('backup.unsafe_path'));
         }
     }
     $manifestRaw = $zip->getFromName('music-share-backup.json');
@@ -486,18 +486,18 @@ function validate_backup_archive(string $file): array {
     try {
         $manifest = json_decode($manifestRaw, true, 512, JSON_THROW_ON_ERROR);
     } catch (Throwable) {
-        throw new RuntimeException('Das Backup-Manifest ist beschädigt.');
+        throw new RuntimeException(t('backup.manifest_invalid'));
     }
     if (!is_array($manifest) || ($manifest['format'] ?? '') !== 'music-share-full-backup' || (int)($manifest['format_version'] ?? 0) !== 1) {
-        throw new RuntimeException('Das Backup-Format wird nicht unterstützt.');
+        throw new RuntimeException(t('backup.unsupported_format'));
     }
     return $manifest;
 }
 
 function create_full_data_backup(string $root, PDO $pdo, string $prefix = 'manual'): string {
-    if (!class_exists(ZipArchive::class)) throw new RuntimeException('Für Backups wird die PHP-Erweiterung ZipArchive benötigt.');
+    if (!class_exists(ZipArchive::class)) throw new RuntimeException(t('backup.zip_extension_required'));
     $backupDir = $root . '/storage/backups';
-    if (!is_dir($backupDir) && !mkdir($backupDir, 0775, true) && !is_dir($backupDir)) throw new RuntimeException('Backup-Verzeichnis ist nicht beschreibbar.');
+    if (!is_dir($backupDir) && !mkdir($backupDir, 0775, true) && !is_dir($backupDir)) throw new RuntimeException(t('backup.dir_not_writable'));
 
     $safePrefix = preg_replace('/[^a-z0-9-]+/i', '-', $prefix) ?: 'manual';
     $file = $backupDir . '/' . $safePrefix . '-full-' . APP_VERSION . '-' . date('Ymd-His') . '.zip';
@@ -538,7 +538,7 @@ function create_full_data_backup(string $root, PDO $pdo, string $prefix = 'manua
     $zip = new ZipArchive();
     if ($zip->open($file, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
         @unlink($tmpDb);
-        throw new RuntimeException('Backup konnte nicht erstellt werden.');
+        throw new RuntimeException(t('backup.create_failed'));
     }
     $zip->addFromString('music-share-backup.json', json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     $zip->addFile($tmpDb, 'database.json');
@@ -563,27 +563,27 @@ function restore_full_data_backup(string $root, PDO $pdo, string $backupName): v
     validate_backup_archive($file);
 
     $tmp = $root . '/storage/full-restore-' . bin2hex(random_bytes(6));
-    if (!mkdir($tmp, 0775, true) && !is_dir($tmp)) throw new RuntimeException('Temporäres Wiederherstellungsverzeichnis konnte nicht erstellt werden.');
+    if (!mkdir($tmp, 0775, true) && !is_dir($tmp)) throw new RuntimeException(t('backup.temp_dir_failed'));
     $zip = new ZipArchive();
     if ($zip->open($file) !== true || !$zip->extractTo($tmp)) {
         remove_directory_tree($tmp);
-        throw new RuntimeException('Backup konnte nicht entpackt werden.');
+        throw new RuntimeException(t('backup.extract_failed'));
     }
     $zip->close();
 
     try {
         $dbFile = $tmp . '/database.json';
-        if (!is_file($dbFile)) throw new RuntimeException('Im Backup fehlt die Datenbank.');
+        if (!is_file($dbFile)) throw new RuntimeException(t('backup.database_missing'));
         $database = json_decode((string)file_get_contents($dbFile), true, 512, JSON_THROW_ON_ERROR);
         if (($database['format'] ?? '') !== 'music-share-database-json' || !is_array($database['tables'] ?? null)) {
-            throw new RuntimeException('Der Datenbankexport im Backup ist ungültig.');
+            throw new RuntimeException(t('backup.database_invalid'));
         }
 
         $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
         foreach ($database['tables'] as $tableData) {
             $table = (string)($tableData['name'] ?? '');
             $create = (string)($tableData['create_sql'] ?? '');
-            if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || $create === '') throw new RuntimeException('Ungültige Tabellendefinition im Backup.');
+            if (!preg_match('/^[A-Za-z0-9_]+$/', $table) || $create === '') throw new RuntimeException(t('backup.table_invalid'));
             $pdo->exec('DROP TABLE IF EXISTS `' . $table . '`');
             $pdo->exec($create);
             $rows = $tableData['rows'] ?? [];
@@ -592,7 +592,7 @@ function restore_full_data_backup(string $root, PDO $pdo, string $backupName): v
                 if (!is_array($row) || !$row) continue;
                 $columns = array_keys($row);
                 foreach ($columns as $column) {
-                    if (!preg_match('/^[A-Za-z0-9_]+$/', (string)$column)) throw new RuntimeException('Ungültiger Spaltenname im Backup.');
+                    if (!preg_match('/^[A-Za-z0-9_]+$/', (string)$column)) throw new RuntimeException(t('backup.column_invalid'));
                 }
                 $quotedColumns = implode(',', array_map(fn($column) => '`' . $column . '`', $columns));
                 $placeholders = implode(',', array_fill(0, count($columns), '?'));
@@ -619,10 +619,10 @@ function restore_full_data_backup(string $root, PDO $pdo, string $backupName): v
 
 function delete_stored_backup(string $root, string $backupName): void {
     $safe = basename($backupName);
-    if ($safe !== $backupName || !str_ends_with(strtolower($safe), '.zip')) throw new RuntimeException('Ungültiger Backupname.');
+    if ($safe !== $backupName || !str_ends_with(strtolower($safe), '.zip')) throw new RuntimeException(t('backup.name_invalid'));
     $file = $root . '/storage/backups/' . $safe;
-    if (!is_file($file)) throw new RuntimeException('Backup wurde nicht gefunden.');
-    if (!unlink($file)) throw new RuntimeException('Backup konnte nicht vom Server gelöscht werden.');
+    if (!is_file($file)) throw new RuntimeException(t('backup.not_found'));
+    if (!unlink($file)) throw new RuntimeException(t('backup.delete_failed'));
 }
 
 function stored_backup_type(string $file): string {
@@ -731,13 +731,13 @@ function validate_migration_backup(string $file): array {
     if (!class_exists(ZipArchive::class)) throw new RuntimeException('ZipArchive ist nicht verfügbar.');
     if (!is_file($file)) throw new RuntimeException('Migrationsbackup wurde nicht gefunden.');
     $zip = new ZipArchive();
-    if ($zip->open($file) !== true) throw new RuntimeException('Die hochgeladene Datei ist kein gültiges ZIP-Archiv.');
+    if ($zip->open($file) !== true) throw new RuntimeException(t('backup.upload_invalid_zip'));
     $manifestRaw = $zip->getFromName('manifest.json');
     $hasSql = $zip->locateName('database.sql') !== false;
     $manifest = is_string($manifestRaw) ? json_decode($manifestRaw, true) : null;
     $zip->close();
     if (!is_array($manifest) || ($manifest['format'] ?? '') !== 'music-share-migration' || !$hasSql) {
-        throw new RuntimeException('Die Datei ist kein gültiges Music-Share-Migrationsbackup.');
+        throw new RuntimeException(t('backup.not_migration_backup'));
     }
     return $manifest;
 }
@@ -746,7 +746,7 @@ function safe_extract_zip(ZipArchive $zip, string $destination): void {
     for ($i = 0; $i < $zip->numFiles; $i++) {
         $name = str_replace('\\', '/', (string)$zip->getNameIndex($i));
         if ($name === '' || str_starts_with($name, '/') || preg_match('#(^|/)\.\.(/|$)#', $name)) {
-            throw new RuntimeException('Das Backup enthält einen unsicheren Dateipfad.');
+            throw new RuntimeException(t('backup.unsafe_path'));
         }
     }
     if (!$zip->extractTo($destination)) throw new RuntimeException('Migrationsbackup konnte nicht entpackt werden.');
@@ -766,11 +766,11 @@ function execute_sql_dump(PDO $pdo, string $sqlFile): void {
 function restore_migration_backup(string $root, PDO $pdo, string $file): void {
     validate_migration_backup($file);
     $tmp = $root . '/storage/migration-restore-' . bin2hex(random_bytes(6));
-    if (!mkdir($tmp, 0775, true) && !is_dir($tmp)) throw new RuntimeException('Temporäres Wiederherstellungsverzeichnis konnte nicht erstellt werden.');
+    if (!mkdir($tmp, 0775, true) && !is_dir($tmp)) throw new RuntimeException(t('backup.temp_dir_failed'));
     $zip = new ZipArchive();
     if ($zip->open($file) !== true) throw new RuntimeException('Migrationsbackup konnte nicht geöffnet werden.');
     try { safe_extract_zip($zip, $tmp); } finally { $zip->close(); }
-    if (!is_file($tmp . '/database.sql')) throw new RuntimeException('Datenbanksicherung fehlt im Backup.');
+    if (!is_file($tmp . '/database.sql')) throw new RuntimeException(t('backup.db_dump_missing'));
     create_migration_backup($root, $pdo);
     execute_sql_dump($pdo, $tmp . '/database.sql');
     $uploadsSource = $tmp . '/uploads';

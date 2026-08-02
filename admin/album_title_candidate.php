@@ -11,7 +11,7 @@ try {
     $accept = (string)($_POST['accept'] ?? '0') === '1';
 
     if ($albumId < 1 || $title === '') {
-        throw new RuntimeException('Ungültiger Albumtitel.');
+        throw new RuntimeException(t('album.invalid_title'));
     }
 
     if ($accept) {

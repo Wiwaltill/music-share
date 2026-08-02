@@ -119,8 +119,8 @@ const msT=window.msT||((key,fallback)=>fallback??key);
       const copyright=mostCommon(entries.map(e=>e.tags.copyright)); if(copyright) fd.append('copyright_text',copyright);
       if(coverBlob) fd.append('cover',coverBlob,coverName);
       const created=await postForm(cfg.createUrl,fd); let done=0, failed=0;
-      for(const entry of entries){status.textContent=`Titel ${done+1} von ${entries.length} wird hochgeladen …`;if(!(await uploadTrack(entry,created.album_id)))failed++;done++;progress.style.width=`${Math.round(done/entries.length*100)}%`;}
-      if(failed) status.textContent=`Upload abgeschlossen, ${failed} Datei(en) fehlgeschlagen.`; else status.textContent=msT('text.album.vollstandig.angelegt', 'Album vollständig angelegt.');
+      for(const entry of entries){status.textContent=msT('direct.upload_progress').replace('{current}', done + 1).replace('{total}', entries.length);if(!(await uploadTrack(entry,created.album_id)))failed++;done++;progress.style.width=`${Math.round(done/entries.length*100)}%`;}
+      if(failed) status.textContent=msT('direct.upload_failed').replace('{count}', failed); else status.textContent=msT('text.album.vollstandig.angelegt', 'Album vollständig angelegt.');
       setTimeout(()=>location.href=`album_edit.php?id=${created.album_id}`,700);
     } catch(e) {status.textContent=e.message||'Direktupload fehlgeschlagen.';start.disabled=false;choose.disabled=false;dropzone?.classList.remove('is-disabled');}
   });

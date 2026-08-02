@@ -154,7 +154,7 @@ try {
 
     $file = $_FILES['file'] ?? null;
     if (!$file || empty($file['tmp_name'])) {
-        throw new RuntimeException('Keine Datei empfangen.');
+        throw new RuntimeException(t('common.no_file_received'));
     }
 
     $serverTags = music_share_read_id3_order((string)$file['tmp_name']);
