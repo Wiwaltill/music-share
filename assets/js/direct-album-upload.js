@@ -6,6 +6,7 @@
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
   const filesInput = document.getElementById('directAlbumFiles');
   const choose = document.getElementById('chooseDirectAlbum');
+  const dropzone = document.getElementById('directAlbumDropzone');
   const start = document.getElementById('startDirectAlbum');
   const summary = document.getElementById('directAlbumSummary');
   const progress = document.getElementById('directAlbumProgress');
@@ -20,6 +21,40 @@
   document.querySelector('[data-open-direct-upload]')?.addEventListener('click', () => modal.show());
   choose?.addEventListener('click', () => filesInput.click());
   filesInput?.addEventListener('change', () => inspect([...filesInput.files]));
+
+  const inspectDroppedFiles = files => {
+    const mp3Files = [...files].filter(file =>
+      file.type === 'audio/mpeg' || file.name.toLowerCase().endsWith('.mp3')
+    );
+    if (!mp3Files.length) {
+      status.textContent = 'Bitte nur MP3-Dateien auswählen oder ablegen.';
+      return;
+    }
+    inspect(mp3Files);
+  };
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropzone?.addEventListener(eventName, event => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropzone.classList.add('is-dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropzone?.addEventListener(eventName, event => {
+      event.preventDefault();
+      event.stopPropagation();
+      dropzone.classList.remove('is-dragover');
+    });
+  });
+  dropzone?.addEventListener('drop', event => inspectDroppedFiles(event.dataTransfer?.files || []));
+  dropzone?.addEventListener('click', () => filesInput.click());
+  dropzone?.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      filesInput.click();
+    }
+  });
 
   function firstNumber(value) { const m = String(value ?? '').match(/^\s*(\d+)/); return m ? parseInt(m[1],10) : 0; }
   function mostCommon(values) {
@@ -77,7 +112,7 @@
   }
   start?.addEventListener('click', async () => {
     if (!entries.length || !titleInput.value.trim()) return;
-    start.disabled=true; choose.disabled=true; progress.style.width='0%'; status.textContent='Album wird angelegt …';
+    start.disabled=true; choose.disabled=true; dropzone?.classList.add('is-disabled'); progress.style.width='0%'; status.textContent='Album wird angelegt …';
     try {
       const fd=new FormData();fd.append('csrf',cfg.csrf);fd.append('title',titleInput.value.trim());fd.append('artist',artistInput.value.trim());fd.append('album_artist',albumArtistInput.value.trim());fd.append('release_year',yearInput.value);fd.append('genre',genreInput.value.trim());
       const copyright=mostCommon(entries.map(e=>e.tags.copyright)); if(copyright) fd.append('copyright_text',copyright);
@@ -86,7 +121,7 @@
       for(const entry of entries){status.textContent=`Titel ${done+1} von ${entries.length} wird hochgeladen …`;if(!(await uploadTrack(entry,created.album_id)))failed++;done++;progress.style.width=`${Math.round(done/entries.length*100)}%`;}
       if(failed) status.textContent=`Upload abgeschlossen, ${failed} Datei(en) fehlgeschlagen.`; else status.textContent='Album vollständig angelegt.';
       setTimeout(()=>location.href=`album_edit.php?id=${created.album_id}`,700);
-    } catch(e) {status.textContent=e.message||'Direktupload fehlgeschlagen.';start.disabled=false;choose.disabled=false;}
+    } catch(e) {status.textContent=e.message||'Direktupload fehlgeschlagen.';start.disabled=false;choose.disabled=false;dropzone?.classList.remove('is-disabled');}
   });
   return true;
   }
