@@ -9,7 +9,7 @@ header('Content-Type: application/json; charset=utf-8');
  */
 function music_share_read_id3_order(string $path): array
 {
-    $result = ['title' => '', 'disc' => 0, 'track' => 0];
+    $result = ['title'=>'','disc'=>0,'track'=>0,'album'=>'','artist'=>'','album_artist'=>'','year'=>0,'genre'=>'','copyright'=>'','cover_mime'=>'','cover_data'=>''];
     $fh = @fopen($path, 'rb');
     if (!$fh) {
         return $result;
@@ -81,17 +81,26 @@ function music_share_read_id3_order(string $path): array
         }
 
         $payload = substr($data, $offset + $headerSize, $frameSize);
-        if (in_array($id, ['TIT2', 'TT2', 'TRCK', 'TRK', 'TPOS', 'TPA'], true)) {
+        if (in_array($id, ['TIT2','TT2','TRCK','TRK','TPOS','TPA','TALB','TAL','TPE1','TP1','TPE2','TP2','TDRC','TYER','TYE','TCON','TCO','TCOP','TCR'], true)) {
             $text = music_share_decode_id3_text($payload);
             if (($id === 'TIT2' || $id === 'TT2') && $text !== '') {
                 $result['title'] = $text;
             } elseif ($id === 'TRCK' || $id === 'TRK') {
                 $result['track'] = music_share_first_positive_number($text);
-            } elseif ($id === 'TPOS' || $id === 'TPA') {
-                $result['disc'] = music_share_first_positive_number($text);
+            } elseif ($id === 'TPOS' || $id === 'TPA') { $result['disc'] = music_share_first_positive_number($text);
+            } elseif ($id === 'TALB' || $id === 'TAL') { $result['album']=$text;
+            } elseif ($id === 'TPE1' || $id === 'TP1') { $result['artist']=$text;
+            } elseif ($id === 'TPE2' || $id === 'TP2') { $result['album_artist']=$text;
+            } elseif (in_array($id,['TDRC','TYER','TYE'],true)) { $result['year']=music_share_first_positive_number($text);
+            } elseif ($id === 'TCON' || $id === 'TCO') { $result['genre']=$text;
+            } elseif ($id === 'TCOP' || $id === 'TCR') { $result['copyright']=$text;
             }
         }
 
+        if (($id === 'APIC' || $id === 'PIC') && $result['cover_data'] === '') {
+            $enc = ord($payload[0] ?? "\0"); $rest = substr($payload,1);
+            if ($id === 'APIC') { $z=strpos($rest,"\0"); if($z!==false){$mime=substr($rest,0,$z);$rest=substr($rest,$z+1);$rest=substr($rest,1);$term=$enc===0||$enc===3?"\0":"\0\0";$d=strpos($rest,$term);if($d!==false)$rest=substr($rest,$d+strlen($term));if(str_starts_with($mime,'image/')&&strlen($rest)>100){$result['cover_mime']=$mime;$result['cover_data']=$rest;}} }
+        }
         $offset += $headerSize + $frameSize;
     }
 
@@ -150,6 +159,7 @@ try {
 
     $serverTags = music_share_read_id3_order((string)$file['tmp_name']);
     $filenameOrder = music_share_filename_order((string)($file['name'] ?? ''));
+    $albumStmt=$pdo->prepare('SELECT * FROM albums WHERE id=?');$albumStmt->execute([$albumId]);$album=$albumStmt->fetch();if(!$album)throw new RuntimeException('Album nicht gefunden.');
 
     $stored = upload_file(
         $file,
@@ -168,6 +178,14 @@ try {
     $disc = max(1, min(99, $serverTags['disc'] ?: $postedDisc ?: $filenameOrder['disc'] ?: 1));
     $requestedTrack = $serverTags['track'] ?: $postedTrack ?: $filenameOrder['track'];
     $duration = max(0, (int)($_POST['duration'] ?? 0));
+
+    $metadataUpdates=[];$metadataParams=[];
+    $map=['artist'=>'artist','album_artist'=>'album_artist','genre'=>'genre','copyright_text'=>'copyright'];
+    foreach($map as $col=>$tagKey){if(trim((string)($album[$col]??''))===''&&trim((string)($serverTags[$tagKey]??''))!==''){$metadataUpdates[]="$col=?";$metadataParams[]=trim((string)$serverTags[$tagKey]);}}
+    if(empty($album['release_year'])&&!empty($serverTags['year'])){$metadataUpdates[]='release_year=?';$metadataParams[]=(int)$serverTags['year'];}
+    if($metadataUpdates){$metadataParams[]=$albumId;$pdo->prepare('UPDATE albums SET '.implode(',',$metadataUpdates).' WHERE id=?')->execute($metadataParams);}
+    $coverCandidate='';
+    if(empty($album['cover_file'])&&!empty($serverTags['cover_data'])){$mime=$serverTags['cover_mime'];$ext=$mime==='image/png'?'png':($mime==='image/webp'?'webp':'jpg');$coverCandidate='pending-'.bin2hex(random_bytes(10)).'.'.$ext;file_put_contents(dirname(__DIR__).'/uploads/covers/'.$coverCandidate,$serverTags['cover_data']);}
 
     $pdo->beginTransaction();
     if ($requestedTrack > 0) {
@@ -191,7 +209,7 @@ try {
         'title' => $title,
         'disc_no' => $disc,
         'track_no' => $trackNo,
-        'tag_source' => ($serverTags['disc'] || $serverTags['track']) ? 'id3' : (($filenameOrder['disc'] || $filenameOrder['track']) ? 'filename' : 'browser'),
+        'cover_candidate'=>$coverCandidate,'metadata_filled'=>count($metadataUpdates),'tag_source' => ($serverTags['disc'] || $serverTags['track']) ? 'id3' : (($filenameOrder['disc'] || $filenameOrder['track']) ? 'filename' : 'browser'),
     ]);
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) {

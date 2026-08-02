@@ -34,9 +34,9 @@ function require_admin(): void { require_login(); if (!is_admin()) { http_respon
 function can_access_album(int $albumId): bool {
     global $pdo;
     if ($albumId < 1 || !is_logged_in()) return false;
-    if (is_admin()) return true;
+    if (is_admin()) { $q=$pdo->prepare('SELECT 1 FROM albums WHERE id=? AND deleted_at IS NULL');$q->execute([$albumId]);return (bool)$q->fetchColumn(); }
     $uid = (int)(current_user()['id'] ?? 0);
-    $stmt = $pdo->prepare('SELECT 1 FROM albums a LEFT JOIN album_collaborators ac ON ac.album_id=a.id AND ac.user_id=? WHERE a.id=? AND (a.owner_user_id=? OR ac.user_id IS NOT NULL) LIMIT 1');
+    $stmt = $pdo->prepare('SELECT 1 FROM albums a LEFT JOIN album_collaborators ac ON ac.album_id=a.id AND ac.user_id=? WHERE a.id=? AND a.deleted_at IS NULL AND (a.owner_user_id=? OR ac.user_id IS NOT NULL) LIMIT 1');
     $stmt->execute([$uid,$albumId,$uid]);
     return (bool)$stmt->fetchColumn();
 }
@@ -177,7 +177,7 @@ function render_header(string $title, bool $admin = false): void {
         echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" value="'.$searchValue.'" placeholder="Alben durchsuchen …" aria-label="Alben durchsuchen"></div></form>';
         echo '<div class="navbar-nav align-items-lg-center gap-lg-2 ms-lg-4">';
         echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>Alben</a>';
-        if (is_admin()) echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>Einstellungen</a>';
+        if (is_admin()) { echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>Papierkorb</a>'; echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>Einstellungen</a>'; }
         echo '<div class="dropdown"><button class="btn btn-sm btn-outline-light dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-circle-half me-2"></i>Erscheinungsbild</button><ul class="dropdown-menu dropdown-menu-end theme-menu"><li><button class="dropdown-item theme-option" type="button" data-theme="auto"><i class="bi bi-display me-2"></i>System<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="light"><i class="bi bi-sun me-2"></i>Hell<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="dark"><i class="bi bi-moon-stars me-2"></i>Dunkel<span class="theme-check ms-auto"></span></button></li></ul></div>';
         echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'"><i class="bi bi-box-arrow-right me-2"></i>Abmelden</a>';
         echo '</div></div>';

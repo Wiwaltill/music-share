@@ -4,20 +4,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   const controls=['play-large','play','progress','current-time','mute','volume'];
   const plyr=window.Plyr?new Plyr(audio,{controls,keyboard:{focused:true,global:false},tooltips:{controls:true,seek:true}}):null;
   const buttons=[...document.querySelectorAll('[data-play]')];let current=-1;
-  function updateTrackButtons(){
-    buttons.forEach((button,index)=>{
-      const isPlaying=index===current&&!audio.paused&&!audio.ended;
-      button.classList.toggle('is-playing',isPlaying);
-      button.textContent=isPlaying?'❚❚':'▶';
-      button.setAttribute('aria-label',isPlaying?'Titel pausieren':'Titel abspielen');
-      button.setAttribute('aria-pressed',isPlaying?'true':'false');
-    });
-  }
-  function start(index){const btn=buttons[index];if(!btn)return;current=index;audio.src=btn.dataset.src;label.textContent=btn.dataset.title||'Wiedergabe';box.hidden=false;requestAnimationFrame(()=>box.classList.add('show'));updateTrackButtons();(plyr?plyr.play():audio.play()).catch?.(()=>{updateTrackButtons()});}
+  function updateTrackButtons(){buttons.forEach((button,index)=>{const active=index===current&&!audio.paused&&!audio.ended;button.classList.toggle('is-playing',active);button.textContent=active?'❚❚':'▶';button.setAttribute('aria-label',active?'Titel pausieren':'Titel abspielen');button.setAttribute('aria-pressed',active?'true':'false')})}
+  function updateMediaSession(btn){if(!('mediaSession' in navigator)||!btn)return;const art=btn.dataset.cover?[{src:btn.dataset.cover,sizes:'512x512'}]:[];navigator.mediaSession.metadata=new MediaMetadata({title:btn.dataset.title||'',artist:btn.dataset.artist||'',album:document.title.split(' – ')[0],artwork:art});try{navigator.mediaSession.setPositionState({duration:audio.duration||1,playbackRate:audio.playbackRate||1,position:Math.min(audio.currentTime||0,audio.duration||1)})}catch{}}
+  function start(index){const btn=buttons[index];if(!btn)return;current=index;audio.src=btn.dataset.src;label.textContent=btn.dataset.title||'Wiedergabe';box.hidden=false;requestAnimationFrame(()=>box.classList.add('show'));updateTrackButtons();updateMediaSession(btn);(plyr?plyr.play():audio.play()).catch?.(()=>updateTrackButtons())}
   buttons.forEach((btn,i)=>btn.addEventListener('click',()=>{if(current===i&&!audio.paused){plyr?plyr.pause():audio.pause()}else if(current===i&&audio.src){(plyr?plyr.play():audio.play()).catch?.(()=>{})}else start(i)}));
-  audio.addEventListener('play',updateTrackButtons);
-  audio.addEventListener('pause',updateTrackButtons);
-  audio.addEventListener('ended',()=>{updateTrackButtons();if(current+1<buttons.length)start(current+1)});
+  audio.addEventListener('play',()=>{updateTrackButtons();if('mediaSession'in navigator)navigator.mediaSession.playbackState='playing'});audio.addEventListener('pause',()=>{updateTrackButtons();if('mediaSession'in navigator)navigator.mediaSession.playbackState='paused'});audio.addEventListener('loadedmetadata',()=>updateMediaSession(buttons[current]));audio.addEventListener('timeupdate',()=>{if(current>=0&&Math.floor(audio.currentTime)%5===0)updateMediaSession(buttons[current])});audio.addEventListener('ended',()=>{updateTrackButtons();if(current+1<buttons.length)start(current+1)});
+  if('mediaSession'in navigator){navigator.mediaSession.setActionHandler('play',()=>audio.play());navigator.mediaSession.setActionHandler('pause',()=>audio.pause());navigator.mediaSession.setActionHandler('previoustrack',()=>{if(current>0)start(current-1)});navigator.mediaSession.setActionHandler('nexttrack',()=>{if(current+1<buttons.length)start(current+1)});navigator.mediaSession.setActionHandler('seekto',d=>{if(typeof d.seekTime==='number')audio.currentTime=d.seekTime})}
   document.querySelector('#closePlayer')?.addEventListener('click',()=>{plyr?plyr.pause():audio.pause();updateTrackButtons();box.classList.remove('show');setTimeout(()=>box.hidden=true,220)});
+  document.querySelector('#shareAlbumButton')?.addEventListener('click',async e=>{const b=e.currentTarget,u=b.dataset.shareUrl,t=b.dataset.shareTitle;try{if(navigator.share)await navigator.share({title:t,url:u});else{await navigator.clipboard.writeText(u);const old=b.innerHTML;b.innerHTML='<i class="bi bi-check-lg me-1"></i>Link kopiert';setTimeout(()=>b.innerHTML=old,1800)}}catch{}});
   const img=document.querySelector('#coverImage');if(img){const apply=()=>{try{const c=document.createElement('canvas');c.width=c.height=40;const x=c.getContext('2d');x.drawImage(img,0,0,40,40);const d=x.getImageData(0,0,40,40).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=16){r+=d[i];g+=d[i+1];b+=d[i+2];n++}document.body.classList.toggle('cover-light',(.299*r+.587*g+.114*b)/n>155)}catch{}};img.complete?apply():img.addEventListener('load',apply)}
 });

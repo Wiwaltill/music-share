@@ -32,9 +32,11 @@ function run_migrations(PDO $pdo): void {
         }
         foreach ([
             'release_year' => "INT UNSIGNED NULL AFTER artist",
+            'album_artist' => "VARCHAR(180) NOT NULL DEFAULT '' AFTER artist",
             'genre' => "VARCHAR(150) NOT NULL DEFAULT '' AFTER release_year",
             'label_name' => "VARCHAR(180) NOT NULL DEFAULT '' AFTER genre",
-            'copyright_text' => "VARCHAR(255) NOT NULL DEFAULT '' AFTER label_name"
+            'copyright_text' => "VARCHAR(255) NOT NULL DEFAULT '' AFTER label_name",
+            'deleted_at' => "DATETIME NULL AFTER cover_file"
         ] as $column => $definition) {
             if (!in_array($column, $albumCols, true)) $pdo->exec("ALTER TABLE albums ADD COLUMN {$column} {$definition}");
         }

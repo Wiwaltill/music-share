@@ -196,6 +196,8 @@
           el.querySelector('.status').className = 'badge text-bg-success status';
           el.querySelector('.status').textContent = 'Fertig';
           addTrack(response);
+          if(response.cover_candidate){const accept=confirm('In der MP3 wurde ein Cover gefunden. Möchtest du es als Albumcover übernehmen?');const cfd=new FormData();cfd.append('csrf',cfg.csrf);cfd.append('album_id',cfg.albumId);cfd.append('file',response.cover_candidate);cfd.append('accept',accept?'1':'0');fetch(cfg.coverCandidateUrl,{method:'POST',body:cfd}).then(()=>{if(accept)location.reload()});}
+          else if(response.metadata_filled>0){setTimeout(()=>location.reload(),950);}
           setTimeout(() => el.remove(), 900);
         } else {
           el.querySelector('.status').className = 'badge text-bg-danger status';
