@@ -5,7 +5,7 @@
 
 #trackUploadPanel.collapsing,#trackUploadPanel.show{border-top:1px solid var(--bs-border-color)}
 
-.play-button.is-playing{font-size:.78rem;letter-spacing:-.12em;padding-right:.1rem}
+.play-button.is-playing{font-size:.78rem;letter-spacing:-.12em}
 html, body { min-height: 100%; }
 body { min-height: 100vh; display: flex; flex-direction: column; }
 body > main { flex: 1 0 auto; width: 100%; }
