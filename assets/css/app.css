@@ -16,6 +16,7 @@ body > main { flex: 1 0 auto; width: 100%; }
 .github-octicon{display:block;flex:0 0 auto}
 @media(max-width:700px){.public-project-footer{padding:.85rem 1rem 7.5rem}}
 .cover-zoom-button{display:block;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.cover-modal-image{max-width:min(92vw,1100px);max-height:90vh;border-radius:1rem;box-shadow:0 2rem 6rem rgba(0,0,0,.65)}.cover-modal-close{position:absolute;right:.75rem;top:.75rem;z-index:2;background-color:rgba(0,0,0,.5);border-radius:50%;padding:.65rem}.album-meta{font-size:.9rem;letter-spacing:.04em;opacity:.72}.album-colors-enabled .btn-contrast,.album-colors-enabled .play-button.is-playing{background:color-mix(in srgb,var(--album-accent) 72%,#111);border-color:color-mix(in srgb,var(--album-accent) 80%,white);color:white}.album-colors-enabled .plyr{--plyr-color-main:var(--album-accent)}
+.cover-zoom-button{display:block;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.cover-modal-image{max-width:min(92vw,1100px);max-height:90vh;border-radius:1rem;box-shadow:0 2rem 6rem rgba(0,0,0,.65)}.cover-modal-close{position:absolute;right:.75rem;top:.75rem;z-index:2;background-color:rgba(0,0,0,.5);border-radius:50%;padding:.65rem}.album-meta{font-size:.9rem;letter-spacing:.04em;opacity:.72}
 
 .backup-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
 .backup-info{min-width:0;flex:1 1 22rem}
