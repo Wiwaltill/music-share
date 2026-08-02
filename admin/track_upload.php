@@ -159,7 +159,7 @@ try {
 
     $serverTags = music_share_read_id3_order((string)$file['tmp_name']);
     $filenameOrder = music_share_filename_order((string)($file['name'] ?? ''));
-    $albumStmt=$pdo->prepare('SELECT * FROM albums WHERE id=?');$albumStmt->execute([$albumId]);$album=$albumStmt->fetch();if(!$album)throw new RuntimeException('Album nicht gefunden.');
+    $albumStmt=$pdo->prepare('SELECT * FROM albums WHERE id=?');$albumStmt->execute([$albumId]);$album=$albumStmt->fetch();if(!$album)throw new RuntimeException(t('text.album.nicht.gefunden'));
 
     $stored = upload_file(
         $file,

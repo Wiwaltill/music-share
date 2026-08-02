@@ -1,3 +1,4 @@
+const msT=window.msT||((key,fallback)=>fallback??key);
 (() => {
   let modalEl;
   let modal;
@@ -15,7 +16,7 @@
         <div class="modal-content shadow">
           <div class="modal-header">
             <h2 class="modal-title fs-5">Hinweis</h2>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label=msT('text.schlieen', 'Schließen')></button>
           </div>
           <div class="modal-body"><p class="mb-0 dialog-message"></p></div>
           <div class="modal-footer">
@@ -38,7 +39,7 @@
     return modalEl;
   }
 
-  function show({title = 'Hinweis', message = '', confirmText = 'Bestätigen', cancelText = 'Abbrechen', variant = 'primary', cancel = true} = {}) {
+  function show({title = msT('text.hinweis', 'Hinweis'), message = '', confirmText = msT('text.bestatigen', 'Bestätigen'), cancelText = msT('text.abbrechen', 'Abbrechen'), variant = 'primary', cancel = true} = {}) {
     return new Promise(resolve => {
       ensureModal();
       resolver = resolve;
@@ -56,15 +57,15 @@
   }
 
   window.MusicShareDialog = {
-    alert(message, title = 'Hinweis') {
+    alert(message, title = msT('text.hinweis', 'Hinweis')) {
       return show({title, message, confirmText: 'OK', cancel: false});
     },
     confirm(message, options = {}) {
       return show({
         title: options.title || 'Bitte bestätigen',
         message,
-        confirmText: options.confirmText || 'Bestätigen',
-        cancelText: options.cancelText || 'Abbrechen',
+        confirmText: options.confirmText || msT('text.bestatigen', 'Bestätigen'),
+        cancelText: options.cancelText || msT('text.abbrechen', 'Abbrechen'),
         variant: options.variant || 'primary',
         cancel: true,
       });
@@ -77,7 +78,7 @@
     event.preventDefault();
     const ok = await window.MusicShareDialog.confirm(form.dataset.confirm || 'Fortfahren?', {
       title: form.dataset.confirmTitle || 'Bitte bestätigen',
-      confirmText: form.dataset.confirmButton || 'Bestätigen',
+      confirmText: form.dataset.confirmButton || msT('text.bestatigen', 'Bestätigen'),
       variant: form.dataset.confirmVariant || 'danger'
     });
     if (!ok) return;
@@ -92,7 +93,7 @@
     event.stopImmediatePropagation();
     const ok = await window.MusicShareDialog.confirm(button.dataset.confirm || 'Fortfahren?', {
       title: button.dataset.confirmTitle || 'Bitte bestätigen',
-      confirmText: button.dataset.confirmButton || 'Bestätigen',
+      confirmText: button.dataset.confirmButton || msT('text.bestatigen', 'Bestätigen'),
       variant: button.dataset.confirmVariant || 'danger'
     });
     if (!ok) return;

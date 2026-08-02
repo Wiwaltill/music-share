@@ -1,3 +1,4 @@
+const msT=window.msT||((key,fallback)=>fallback??key);
 document.addEventListener('DOMContentLoaded',()=>{
   const audio=document.querySelector('#mainPlayer'),box=document.querySelector('#floatingPlayer'),label=document.querySelector('#nowPlaying');
   if(!audio)return;
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const active=index===current&&!audio.paused&&!audio.ended;
       button.classList.toggle('is-playing',active);
       button.textContent=active?'❚❚':'▶';
-      button.setAttribute('aria-label',active?'Titel pausieren':'Titel abspielen');
+      button.setAttribute('aria-label',active?msT('text.titel.pausieren', 'Titel pausieren'):msT('text.titel.abspielen', 'Titel abspielen'));
       button.setAttribute('aria-pressed',active?'true':'false');
     });
   }
@@ -36,7 +37,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     current=index;
     lastPositionUpdate=-1;
     audio.src=btn.dataset.src;
-    label.textContent=btn.dataset.title||'Wiedergabe';
+    label.textContent=btn.dataset.title||msT('text.wiedergabe', 'Wiedergabe');
     box.hidden=false;
     requestAnimationFrame(()=>box.classList.add('show'));
     updateTrackButtons();

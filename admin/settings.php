@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $language = (string)($_POST['language'] ?? 'de');
         if (!array_key_exists($language, supported_languages())) $language = 'de';
         set_setting('language', $language);
-        flash('success', 'Seiteneinstellungen gespeichert.');
+        flash('success', t('text.seiteneinstellungen.gespeichert'));
         redirect('admin/settings.php');
     }
 
@@ -76,60 +76,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $users = $pdo->query('SELECT id,username,display_name,role,is_active,created_at FROM users ORDER BY username')->fetchAll();
-render_header('Einstellungen', true);
+render_header(t('page.settings.title'), true);
 ?>
-<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1">Einstellungen</h1><p class="text-body-secondary mb-0">Seitendarstellung und Zugänge verwalten.</p></div><a class="btn btn-outline-primary" href="update.php">Updates</a></div>
+<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1"><?=e(t('page.settings.title'))?></h1><p class="text-body-secondary mb-0"><?=e(t('text.seitendarstellung.und.zugange.verwalten'))?></p></div><a class="btn btn-outline-primary" href="update.php"><?=e(t('text.updates'))?></a></div>
 <div class="row g-4">
   <div class="col-lg-5">
     <div class="card shadow-sm"><div class="card-body p-4">
-      <h2 class="h5">Allgemein</h2>
+      <h2 class="h5"><?=e(t('text.allgemein'))?></h2>
       <form method="post">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="site">
-        <label class="form-label" for="site_name">Site Name</label>
+        <label class="form-label" for="site_name"><?=e(t('text.site.name'))?></label>
         <input class="form-control" id="site_name" name="site_name" maxlength="120" value="<?=e(app_name())?>" required>
-        <div class="form-text">Wird im Backend, im Seitentitel und in der Navigation verwendet.</div><div class="mt-3">
+        <div class="form-text"><?=e(t('text.wird.im.backend.im.seitentitel.und.in.der.navigation'))?></div><div class="mt-3">
           <label class="form-label" for="language"><?=e(t('language'))?></label>
           <select class="form-select" id="language" name="language">
             <?php foreach(supported_languages() as $code=>$label): ?>
               <option value="<?=e($code)?>" <?=current_language()===$code?'selected':''?>><?=e($label)?></option>
             <?php endforeach; ?>
           </select>
-          <div class="form-text">Die Systemsprache gilt für Backend, öffentliche Seiten und Systemmeldungen. Weitere Sprachen können später über Sprachdateien ergänzt werden.</div>
-        </div><div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" role="switch" id="album_colors_enabled" name="album_colors_enabled" <?=get_setting('album_colors_enabled','0')==='1'?'checked':''?>> <label class="form-check-label" for="album_colors_enabled">Albumfarben aus dem Cover auf öffentlichen Seiten verwenden</label></div><div class="form-text">Ist die Funktion deaktiviert, wird die neutrale Glasdarstellung verwendet.</div>
-        <button class="btn btn-primary mt-3">Speichern</button>
+          <div class="form-text"><?=e(t('text.die.systemsprache.gilt.fur.backend.offentliche.seiten.und.systemmeldungen'))?></div>
+        </div><div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" role="switch" id="album_colors_enabled" name="album_colors_enabled" <?=get_setting('album_colors_enabled','0')==='1'?'checked':''?>> <label class="form-check-label" for="album_colors_enabled"><?=e(t('text.albumfarben.aus.dem.cover.auf.offentlichen.seiten.verwenden'))?></label></div><div class="form-text"><?=e(t('text.ist.die.funktion.deaktiviert.wird.die.neutrale.glasdarstellung.verwendet'))?></div>
+        <button class="btn btn-primary mt-3"><?=e(t('text.speichern'))?></button>
       </form>
     </div></div>
   </div>
   <div class="col-lg-7" id="users">
     <div class="card shadow-sm mb-4"><div class="card-body p-4">
-      <h2 class="h5">Benutzer hinzufügen</h2>
+      <h2 class="h5"><?=e(t('text.benutzer.hinzufugen'))?></h2>
       <form method="post" class="row g-3">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="create_user">
-        <div class="col-md-6"><label class="form-label">Benutzername</label><input class="form-control" name="username" required></div>
-        <div class="col-md-6"><label class="form-label">Anzeigename</label><input class="form-control" name="display_name"></div>
-        <div class="col-md-6"><label class="form-label">Passwort</label><input type="password" class="form-control" name="password" minlength="8" required></div>
-        <div class="col-md-6"><label class="form-label">Rolle</label><select class="form-select" name="role"><option value="user">Nutzer</option><option value="admin">Administrator</option></select></div>
-        <div class="col-12"><button class="btn btn-primary">Benutzer anlegen</button></div>
+        <div class="col-md-6"><label class="form-label"><?=e(t('text.benutzername'))?></label><input class="form-control" name="username" required></div>
+        <div class="col-md-6"><label class="form-label"><?=e(t('text.anzeigename'))?></label><input class="form-control" name="display_name"></div>
+        <div class="col-md-6"><label class="form-label"><?=e(t('text.passwort'))?></label><input type="password" class="form-control" name="password" minlength="8" required></div>
+        <div class="col-md-6"><label class="form-label"><?=e(t('text.rolle'))?></label><select class="form-select" name="role"><option value="user"><?=e(t('text.nutzer'))?></option><option value="admin">Administrator</option></select></div>
+        <div class="col-12"><button class="btn btn-primary"><?=e(t('text.benutzer.anlegen'))?></button></div>
       </form>
     </div></div>
     <?php foreach($users as $u): ?>
     <div class="card shadow-sm mb-3"><div class="card-body">
       <form method="post" class="row g-3 align-items-end">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="update_user"><input type="hidden" name="user_id" value="<?=$u['id']?>">
-        <div class="col-md-4"><label class="form-label">Benutzername</label><input class="form-control" value="<?=e($u['username'])?>" disabled></div>
-        <div class="col-md-4"><label class="form-label">Anzeigename</label><input class="form-control" name="display_name" value="<?=e($u['display_name'])?>"></div>
-        <div class="col-md-4"><label class="form-label">Rolle</label><select class="form-select" name="role"><option value="user" <?=$u['role']==='user'?'selected':''?>>Nutzer</option><option value="admin" <?=$u['role']==='admin'?'selected':''?>>Administrator</option></select></div>
-        <div class="col-md-5"><label class="form-label">Neues Passwort</label><input type="password" class="form-control" name="password" minlength="8" placeholder="Unverändert lassen"></div>
-        <div class="col-md-3"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="is_active" id="active<?=$u['id']?>" <?=$u['is_active']?'checked':''?>><label class="form-check-label" for="active<?=$u['id']?>">Aktiv</label></div></div>
-        <div class="col-md-4 text-md-end"><button class="btn btn-outline-primary">Speichern</button></div>
+        <div class="col-md-4"><label class="form-label"><?=e(t('text.benutzername'))?></label><input class="form-control" value="<?=e($u['username'])?>" disabled></div>
+        <div class="col-md-4"><label class="form-label"><?=e(t('text.anzeigename'))?></label><input class="form-control" name="display_name" value="<?=e($u['display_name'])?>"></div>
+        <div class="col-md-4"><label class="form-label"><?=e(t('text.rolle'))?></label><select class="form-select" name="role"><option value="user" <?=$u['role']==='user'?'selected':''?>><?=e(t('text.nutzer'))?></option><option value="admin" <?=$u['role']==='admin'?'selected':''?>>Administrator</option></select></div>
+        <div class="col-md-5"><label class="form-label"><?=e(t('text.neues.passwort'))?></label><input type="password" class="form-control" name="password" minlength="8" placeholder="<?=e(t('text.unverandert.lassen'))?>"></div>
+        <div class="col-md-3"><div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="is_active" id="active<?=$u['id']?>" <?=$u['is_active']?'checked':''?>><label class="form-check-label" for="active<?=$u['id']?>"><?=e(t('text.aktiv'))?></label></div></div>
+        <div class="col-md-4 text-md-end"><button class="btn btn-outline-primary"><?=e(t('text.speichern'))?></button></div>
       </form>
       <?php if((int)$u['id'] !== (int)$_SESSION['user_id']):?>
       <form method="post" class="mt-3 text-end" data-confirm="Benutzer wirklich löschen?">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="delete_user"><input type="hidden" name="user_id" value="<?=$u['id']?>">
-        <button class="btn btn-sm btn-outline-danger">Benutzer löschen</button>
+        <button class="btn btn-sm btn-outline-danger"><?=e(t('text.benutzer.loschen'))?></button>
       </form>
       <?php endif?>
-      <div class="small text-body-secondary mt-2">Erstellt: <?=e($u['created_at'])?></div>
+      <div class="small text-body-secondary mt-2"><?=e(t('text.erstellt'))?> <?=e($u['created_at'])?></div>
     </div></div>
     <?php endforeach; ?>
   </div>

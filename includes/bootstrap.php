@@ -26,14 +26,9 @@ try {
     ]);
 } catch (PDOException $e) {
     http_response_code(500);
-    exit('Datenbankverbindung fehlgeschlagen. Bitte Konfiguration prüfen.');
+    exit(t('text.datenbankverbindung.fehlgeschlagen.bitte.konfiguration.prufen'));
 }
 
 require_once __DIR__.'/migrations.php';
 run_migrations($pdo);
 
-$scriptBase = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
-$translatablePages = ['index.php','album.php','album_edit.php','settings.php','login.php','trash.php','update.php','shares.php','share.php'];
-if (in_array(current_language(), ['en','fr'], true) && in_array($scriptBase, $translatablePages, true)) {
-    ob_start('translate_static_html');
-}

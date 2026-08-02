@@ -1,3 +1,4 @@
+const msT=window.msT||((key,fallback)=>fallback??key);
 (() => {
   'use strict';
   const key = 'musicshare-theme';

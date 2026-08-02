@@ -1,3 +1,4 @@
+const msT=window.msT||((key,fallback)=>fallback??key);
 (() => {
   function initDirectAlbumUpload() {
   const cfg = window.directAlbumUploadConfig;
@@ -27,7 +28,7 @@
       file.type === 'audio/mpeg' || file.name.toLowerCase().endsWith('.mp3')
     );
     if (!mp3Files.length) {
-      status.textContent = 'Bitte nur MP3-Dateien auswählen oder ablegen.';
+      status.textContent = msT('text.bitte.nur.mp3.dateien.auswahlen.oder.ablegen', 'Bitte nur MP3-Dateien auswählen oder ablegen.');
       return;
     }
     inspect(mp3Files);
@@ -97,7 +98,7 @@
     albumArtistInput.value=mostCommon(entries.map(e=>e.tags.albumartist || e.tags.albumArtist));
     yearInput.value=firstNumber(mostCommon(entries.map(e=>e.tags.year)));
     genreInput.value=mostCommon(entries.map(e=>e.tags.genre));
-    summary.innerHTML=entries.map(e=>`<div class="d-flex justify-content-between border-bottom py-2 gap-3"><span class="text-truncate">${escapeHtml(e.file.name)}</span><span class="text-body-secondary text-nowrap">CD ${e.disc} · ${e.track ? 'Titel '+e.track : 'ohne TRACK'}</span></div>`).join('');
+    summary.innerHTML=entries.map(e=>`<div class="d-flex justify-content-between border-bottom py-2 gap-3"><span class="text-truncate">${escapeHtml(e.file.name)}</span><span class="text-body-secondary text-nowrap">CD ${e.disc} · ${e.track ? msT('text.titel.auswahlen', 'Track')+' '+e.track : msT('text.ohne.track', msT('text.ohne.track'))}</span></div>`).join('');
     status.textContent=`${entries.length} Dateien erkannt${coverBlob?' · eingebettetes Cover gefunden':''}.`;
     start.disabled=entries.length===0 || !titleInput.value.trim();
   }
@@ -112,14 +113,14 @@
   }
   start?.addEventListener('click', async () => {
     if (!entries.length || !titleInput.value.trim()) return;
-    start.disabled=true; choose.disabled=true; dropzone?.classList.add('is-disabled'); progress.style.width='0%'; status.textContent='Album wird angelegt …';
+    start.disabled=true; choose.disabled=true; dropzone?.classList.add('is-disabled'); progress.style.width='0%'; status.textContent=msT('text.album.wird.angelegt', 'Album wird angelegt …');
     try {
       const fd=new FormData();fd.append('csrf',cfg.csrf);fd.append('title',titleInput.value.trim());fd.append('artist',artistInput.value.trim());fd.append('album_artist',albumArtistInput.value.trim());fd.append('release_year',yearInput.value);fd.append('genre',genreInput.value.trim());
       const copyright=mostCommon(entries.map(e=>e.tags.copyright)); if(copyright) fd.append('copyright_text',copyright);
       if(coverBlob) fd.append('cover',coverBlob,coverName);
       const created=await postForm(cfg.createUrl,fd); let done=0, failed=0;
       for(const entry of entries){status.textContent=`Titel ${done+1} von ${entries.length} wird hochgeladen …`;if(!(await uploadTrack(entry,created.album_id)))failed++;done++;progress.style.width=`${Math.round(done/entries.length*100)}%`;}
-      if(failed) status.textContent=`Upload abgeschlossen, ${failed} Datei(en) fehlgeschlagen.`; else status.textContent='Album vollständig angelegt.';
+      if(failed) status.textContent=`Upload abgeschlossen, ${failed} Datei(en) fehlgeschlagen.`; else status.textContent=msT('text.album.vollstandig.angelegt', 'Album vollständig angelegt.');
       setTimeout(()=>location.href=`album_edit.php?id=${created.album_id}`,700);
     } catch(e) {status.textContent=e.message||'Direktupload fehlgeschlagen.';start.disabled=false;choose.disabled=false;dropzone?.classList.remove('is-disabled');}
   });
