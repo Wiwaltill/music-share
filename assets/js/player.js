@@ -78,5 +78,16 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   document.querySelector('#closePlayer')?.addEventListener('click',()=>{plyr?plyr.pause():audio.pause();updateTrackButtons();box.classList.remove('show');setTimeout(()=>box.hidden=true,220)});
   document.querySelector('#shareAlbumButton')?.addEventListener('click',async e=>{const b=e.currentTarget,u=b.dataset.shareUrl,t=b.dataset.shareTitle;try{if(navigator.share)await navigator.share({title:t,url:u});else{await navigator.clipboard.writeText(u);const old=b.innerHTML;b.innerHTML='<i class="bi bi-check-lg me-1"></i>Link kopiert';setTimeout(()=>b.innerHTML=old,1800)}}catch{}});
+
+  const coverButton=document.querySelector('.cover-zoom-button');
+  const coverModalElement=document.querySelector('#coverModal');
+  if(coverButton&&coverModalElement&&window.bootstrap){
+    const coverModal=bootstrap.Modal.getOrCreateInstance(coverModalElement);
+    coverButton.addEventListener('click',event=>{
+      event.preventDefault();
+      coverModal.show();
+    });
+  }
+
   const img=document.querySelector('#coverImage');if(img){const apply=()=>{try{const c=document.createElement('canvas');c.width=c.height=40;const x=c.getContext('2d');x.drawImage(img,0,0,40,40);const d=x.getImageData(0,0,40,40).data;let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=16){r+=d[i];g+=d[i+1];b+=d[i+2];n++}document.body.classList.toggle('cover-light',(.299*r+.587*g+.114*b)/n>155)}catch{}};img.complete?apply():img.addEventListener('load',apply)}
 });
