@@ -194,6 +194,7 @@ function render_footer(): void {
         echo '</span></div></footer>';
     }
     echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>';
+    echo '<script src="'.base_url('assets/js/dialogs.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
     echo '<script src="'.base_url('assets/js/theme.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
     echo '<script src="'.base_url('assets/js/player.js?v=' . rawurlencode(APP_VERSION)).'"></script></body></html>';
 }

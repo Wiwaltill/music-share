@@ -253,7 +253,7 @@
 
     if (pendingAlbumTitles.size) {
       const [candidate] = [...pendingAlbumTitles.entries()].sort((a, b) => b[1] - a[1])[0];
-      const accept = confirm(`Alle Titel wurden hochgeladen. Im MP3-Tag wurde der Albumtitel „${candidate}“ gefunden. Soll der bisherige Albumtitel „${cfg.currentAlbumTitle}“ ersetzt werden?`);
+      const accept = await MusicShareDialog.confirm(`Alle Titel wurden hochgeladen. Im MP3-Tag wurde der Albumtitel „${candidate}“ gefunden. Soll der bisherige Albumtitel „${cfg.currentAlbumTitle}“ ersetzt werden?`, {title: "Albumtitel übernehmen?", confirmText: "Titel ersetzen", variant: "primary"});
       try {
         await postDecision(cfg.albumTitleCandidateUrl, {title: candidate, accept: accept ? '1' : '0'});
         if (accept) {
@@ -261,13 +261,13 @@
           reloadRequired = true;
         }
       } catch (error) {
-        alert(error.message || 'Der Albumtitel konnte nicht aktualisiert werden.');
+        await MusicShareDialog.alert(error.message || 'Der Albumtitel konnte nicht aktualisiert werden.', 'Fehler');
       }
     }
 
     if (pendingCoverCandidates.length) {
       const first = pendingCoverCandidates[0];
-      const accept = confirm('Alle Titel wurden hochgeladen. In einer MP3 wurde ein Cover gefunden. Möchtest du es als Albumcover übernehmen?');
+      const accept = await MusicShareDialog.confirm('Alle Titel wurden hochgeladen. In einer MP3 wurde ein Cover gefunden. Möchtest du es als Albumcover übernehmen?', {title: 'Cover übernehmen?', confirmText: 'Cover übernehmen', variant: 'primary'});
       try {
         await postDecision(cfg.coverCandidateUrl, {file: first, accept: accept ? '1' : '0'});
         for (const extra of pendingCoverCandidates.slice(1)) {
@@ -275,7 +275,7 @@
         }
         if (accept) reloadRequired = true;
       } catch (error) {
-        alert(error.message || 'Das eingebettete Cover konnte nicht verarbeitet werden.');
+        await MusicShareDialog.alert(error.message || 'Das eingebettete Cover konnte nicht verarbeitet werden.', 'Fehler');
       }
     }
 
@@ -345,7 +345,7 @@
     checkbox?.addEventListener('change', refreshBulkSelection);
     checkbox?.addEventListener('mousedown', event => event.stopPropagation());
     row.querySelector('.track-delete')?.addEventListener('click', async () => {
-      if (!confirm('Titel wirklich löschen?')) return;
+      if (!await MusicShareDialog.confirm('Titel wirklich löschen?', {confirmText: 'Löschen', variant: 'danger'})) return;
       const fd = new FormData();
       fd.append('csrf', cfg.csrf);
       fd.append('id', row.dataset.id);
@@ -367,7 +367,7 @@
   bulkDeleteTracks?.addEventListener('click', async () => {
     const rows = selectedRows();
     if (!rows.length) return;
-    if (!confirm(`${rows.length} ausgewählte Titel wirklich dauerhaft löschen?`)) return;
+    if (!await MusicShareDialog.confirm(`${rows.length} ausgewählte Titel wirklich dauerhaft löschen?`, {confirmText: 'Titel löschen', variant: 'danger'})) return;
     const fd = new FormData();
     fd.append('csrf', cfg.csrf);
     fd.append('album_id', cfg.albumId);
@@ -377,7 +377,7 @@
     let result = {};
     try { result = await response.json(); } catch (_) {}
     if (!response.ok || !result.ok) {
-      alert(result.message || 'Die ausgewählten Titel konnten nicht gelöscht werden.');
+      await MusicShareDialog.alert(result.message || 'Die ausgewählten Titel konnten nicht gelöscht werden.', 'Fehler');
       refreshBulkSelection();
       return;
     }
@@ -399,12 +399,12 @@
 
   document.querySelector('#addDisc')?.addEventListener('click', () => createDisc(boards.querySelectorAll('.disc-board').length + 1));
 
-  boards?.addEventListener('click', event => {
+  boards?.addEventListener('click', async event => {
     const btn = event.target.closest('.remove-disc');
     if (!btn) return;
     const board = btn.closest('.disc-board');
     const rows = [...board.querySelectorAll('.track-admin-row')];
-    if (rows.length && !confirm('Die Titel werden auf CD 1 verschoben. Fortfahren?')) return;
+    if (rows.length && !await MusicShareDialog.confirm('Die Titel werden auf CD 1 verschoben. Fortfahren?', {confirmText: 'Verschieben', variant: 'warning'})) return;
     rows.forEach(row => firstList().append(row));
     board.remove();
     normalizeDiscs();

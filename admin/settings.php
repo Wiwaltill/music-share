@@ -113,7 +113,7 @@ render_header('Einstellungen', true);
         <div class="col-md-4 text-md-end"><button class="btn btn-outline-primary">Speichern</button></div>
       </form>
       <?php if((int)$u['id'] !== (int)$_SESSION['user_id']):?>
-      <form method="post" class="mt-3 text-end" onsubmit="return confirm('Benutzer wirklich löschen?')">
+      <form method="post" class="mt-3 text-end" data-confirm="Benutzer wirklich löschen?">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="delete_user"><input type="hidden" name="user_id" value="<?=$u['id']?>">
         <button class="btn btn-sm btn-outline-danger">Benutzer löschen</button>
       </form>
