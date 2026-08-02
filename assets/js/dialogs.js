@@ -1,4 +1,4 @@
-const msT=window.msT||((key,fallback)=>fallback??key);
+var msT=window.msT||((key,fallback)=>fallback??key);
 (() => {
   let modalEl;
   let modal;
@@ -15,18 +15,19 @@ const msT=window.msT||((key,fallback)=>fallback??key);
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow">
           <div class="modal-header">
-            <h2 class="modal-title fs-5">Hinweis</h2>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label=msT('text.schlieen', 'Schließen')></button>
+            <h2 class="modal-title fs-5">${msT('text.hinweis', 'Hinweis')}</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${msT('text.schlieen', 'Schließen')}"></button>
           </div>
           <div class="modal-body"><p class="mb-0 dialog-message"></p></div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary dialog-cancel" data-bs-dismiss="modal">Abbrechen</button>
-            <button type="button" class="btn btn-primary dialog-confirm">Bestätigen</button>
+            <button type="button" class="btn btn-outline-secondary dialog-cancel" data-bs-dismiss="modal">${msT('text.abbrechen', 'Abbrechen')}</button>
+            <button type="button" class="btn btn-primary dialog-confirm">${msT('text.bestatigen', 'Bestätigen')}</button>
           </div>
         </div>
       </div>`;
     document.body.append(modalEl);
-    modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    if (!window.bootstrap?.Modal) throw new Error('Bootstrap Modal is unavailable.');
+    modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
     modalEl.querySelector('.dialog-confirm').addEventListener('click', () => {
       if (resolver) resolver(true);
       resolver = null;
@@ -62,7 +63,7 @@ const msT=window.msT||((key,fallback)=>fallback??key);
     },
     confirm(message, options = {}) {
       return show({
-        title: options.title || 'Bitte bestätigen',
+        title: options.title || msT('dialog.confirm_title', 'Bitte bestätigen'),
         message,
         confirmText: options.confirmText || msT('text.bestatigen', 'Bestätigen'),
         cancelText: options.cancelText || msT('text.abbrechen', 'Abbrechen'),
@@ -76,14 +77,14 @@ const msT=window.msT||((key,fallback)=>fallback??key);
     const form = event.target.closest('form[data-confirm]');
     if (!form || form.dataset.confirmBypass === '1') return;
     event.preventDefault();
-    const ok = await window.MusicShareDialog.confirm(form.dataset.confirm || 'Fortfahren?', {
-      title: form.dataset.confirmTitle || 'Bitte bestätigen',
+    const ok = await window.MusicShareDialog.confirm(form.dataset.confirm || msT('dialog.continue', 'Fortfahren?'), {
+      title: form.dataset.confirmTitle || msT('dialog.confirm_title', 'Bitte bestätigen'),
       confirmText: form.dataset.confirmButton || msT('text.bestatigen', 'Bestätigen'),
       variant: form.dataset.confirmVariant || 'danger'
     });
     if (!ok) return;
     form.dataset.confirmBypass = '1';
-    form.requestSubmit(event.submitter || undefined);
+    HTMLFormElement.prototype.submit.call(form);
   }, true);
 
   document.addEventListener('click', async event => {
@@ -91,14 +92,14 @@ const msT=window.msT||((key,fallback)=>fallback??key);
     if (!button || button.dataset.confirmBypass === '1') return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    const ok = await window.MusicShareDialog.confirm(button.dataset.confirm || 'Fortfahren?', {
-      title: button.dataset.confirmTitle || 'Bitte bestätigen',
+    const ok = await window.MusicShareDialog.confirm(button.dataset.confirm || msT('dialog.continue', 'Fortfahren?'), {
+      title: button.dataset.confirmTitle || msT('dialog.confirm_title', 'Bitte bestätigen'),
       confirmText: button.dataset.confirmButton || msT('text.bestatigen', 'Bestätigen'),
       variant: button.dataset.confirmVariant || 'danger'
     });
     if (!ok) return;
     button.dataset.confirmBypass = '1';
-    if (button.form) button.form.requestSubmit(button);
-    else button.click();
+    if (button.form) { button.form.dataset.confirmBypass = '1'; HTMLFormElement.prototype.submit.call(button.form); }
+    else { button.dataset.confirmBypass = '1'; button.click(); }
   }, true);
 })();

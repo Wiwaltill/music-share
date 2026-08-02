@@ -1,4 +1,4 @@
-const msT=window.msT||((key,fallback)=>fallback??key);
+var msT=window.msT||((key,fallback)=>fallback??key);
 document.addEventListener('DOMContentLoaded',()=>{
   const audio=document.querySelector('#mainPlayer'),box=document.querySelector('#floatingPlayer'),label=document.querySelector('#nowPlaying');
   if(!audio)return;

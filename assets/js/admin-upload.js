@@ -1,4 +1,4 @@
-const msT=window.msT||((key,fallback)=>fallback??key);
+var msT=window.msT||((key,fallback)=>fallback??key);
 (() => {
   const cfg = window.albumUploadConfig;
   const pendingAlbumTitles = new Map();

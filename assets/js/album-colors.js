@@ -1,4 +1,4 @@
-const msT=window.msT||((key,fallback)=>fallback??key);
+var msT=window.msT||((key,fallback)=>fallback??key);
 (() => {
   const body = document.body;
   if (!body.classList.contains('public-album') || body.dataset.albumColors !== '1') return;
