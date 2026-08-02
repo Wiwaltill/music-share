@@ -31,6 +31,18 @@ try{
     }
 }catch(Throwable $e){$chart=[];}
 
+
+$shareStats=[];
+try{
+ $q=$pdo->prepare("SELECT sh.id,sh.label,sh.token,
+ SUM(CASE WHEN s.event_type='album_view' THEN s.event_count ELSE 0 END) views,
+ SUM(CASE WHEN s.event_type='track_play' THEN s.event_count ELSE 0 END) plays,
+ SUM(CASE WHEN s.event_type IN('track_download','album_download') THEN s.event_count ELSE 0 END) downloads
+ FROM shares sh LEFT JOIN statistics_daily s ON s.share_id=sh.id".($period>0?" AND s.event_date>=DATE_SUB(CURDATE(),INTERVAL ".(int)($period-1)." DAY)":"")."
+ WHERE sh.album_id=? GROUP BY sh.id,sh.label,sh.token ORDER BY views DESC,plays DESC");
+ $q->execute([$id]);$shareStats=$q->fetchAll();
+}catch(Throwable $e){}
+
 render_header(t('stats.title'),true); ?>
 <div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1"><?=e(t('stats.title'))?></h1><p class="text-body-secondary mb-0"><?=e($album['title'])?> · <?=e($album['artist'])?></p></div><a class="btn btn-outline-secondary" href="album_edit.php?id=<?=$id?>"><?=e(t('text.zuruck'))?></a></div>
 <?php if(!statistics_enabled()):?><div class="alert alert-info"><?=e(t('stats.disabled_notice'))?></div><?php endif?>
@@ -64,5 +76,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 </script>
 <?php endif?>
+
+<div class="card shadow-sm mb-4"><div class="card-body"><h2 class="h5"><?=e(t('stats.by_share'))?></h2><p class="text-body-secondary small"><?=e(t('stats.by_share_help'))?></p>
+<?php if($shareStats):?><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th><?=e(t('text.bezeichnung'))?></th><th class="text-end"><?=e(t('stats.views'))?></th><th class="text-end"><?=e(t('stats.plays'))?></th><th class="text-end"><?=e(t('stats.downloads'))?></th></tr></thead><tbody><?php foreach($shareStats as $r):?><tr><td><?=e($r['label']?:$r['token'])?></td><td class="text-end"><?=(int)$r['views']?></td><td class="text-end"><?=(int)$r['plays']?></td><td class="text-end"><?=(int)$r['downloads']?></td></tr><?php endforeach?></tbody></table></div><?php else:?><div class="text-body-secondary"><?=e(t('stats.no_share_data'))?></div><?php endif?></div></div>
 <div class="card shadow-sm"><div class="card-body"><h2 class="h5"><?=e(t('stats.top_tracks'))?></h2><?php if($top):?><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th><?=e(t('text.titel'))?></th><th class="text-end"><?=e(t('stats.plays'))?></th></tr></thead><tbody><?php foreach($top as $r):?><tr><td><?=e($r['title'])?></td><td class="text-end"><?=number_format((int)$r['plays'],0,',','.')?></td></tr><?php endforeach?></tbody></table></div><?php else:?><div class="text-body-secondary"><?=e(t('stats.no_data'))?></div><?php endif?></div></div>
 <?php render_footer();

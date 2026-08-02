@@ -176,6 +176,59 @@ function password_reset_user(string $token): ?array {
     $stmt->execute([hash('sha256',$token)]);
     return $stmt->fetch() ?: null;
 }
+
+function system_mail_layout(string $title,string $content,?string $buttonLabel=null,?string $buttonUrl=null): string {
+    $button=($buttonLabel&&$buttonUrl)
+        ? '<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0 8px"><tr><td style="border-radius:8px;background:#0d6efd"><a href="'.e($buttonUrl).'" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700">'.e($buttonLabel).'</a></td></tr></table>'
+        : '';
+
+    $brandMark='<table role="presentation" cellspacing="0" cellpadding="0" border="0"><tr>'
+        .'<td style="width:44px;height:44px;text-align:center;vertical-align:middle;border-radius:13px;background:rgba(255,255,255,.13);font-size:23px;color:#ffffff">♫</td>'
+        .'<td style="padding-left:14px;vertical-align:middle"><div style="font-size:18px;font-weight:700;line-height:1.15;color:#ffffff">'.e(app_name()).'</div>'
+        .'<div style="font-size:11px;line-height:1.3;color:#aeb7c4;margin-top:4px">'.e(t('open_source_album_manager')).'</div></td>'
+        .'</tr></table>';
+
+    return '<!doctype html><html><body style="margin:0;padding:0;background:#eef1f4">'
+        .'<div style="display:none;max-height:0;overflow:hidden;opacity:0">'.e($title).'</div>'
+        .'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#eef1f4"><tr><td align="center" style="padding:28px 12px">'
+        .'<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:640px;background:#ffffff;border:1px solid #dfe3e8;border-radius:16px;overflow:hidden">'
+        .'<tr><td style="padding:21px 26px;background:#111827">'.$brandMark.'</td></tr>'
+        .'<tr><td style="padding:28px 28px 8px"><h1 style="font-family:Arial,sans-serif;font-size:24px;line-height:1.3;margin:0;color:#111827">'.e($title).'</h1></td></tr>'
+        .'<tr><td style="padding:10px 28px 30px;font-family:Arial,sans-serif;font-size:15px;line-height:1.65;color:#343a40">'.$content.$button.'</td></tr>'
+        .'<tr><td style="padding:17px 28px;background:#f7f8fa;border-top:1px solid #e7eaee;font-family:Arial,sans-serif;font-size:12px;line-height:1.5;color:#6c757d">'.e(t('mail.footer_note')).'</td></tr>'
+        .'</table></td></tr></table></body></html>';
+}
+function album_mail_card(array $album,?string $coverUrl=null): string {
+    $title=e((string)($album['title']??''));
+    $artist=e((string)($album['artist']??''));
+    if($coverUrl){
+        $cover='<img src="'.e($coverUrl).'" width="150" height="150" alt="'.e(t('common.album_cover_alt')).'" style="display:block;width:150px;height:150px;object-fit:cover;border:0;border-radius:12px">';
+    }else{
+        $cover='<div style="width:150px;height:150px;line-height:150px;text-align:center;border-radius:12px;background:#e9ecef;color:#6c757d;font-size:46px">♫</div>';
+    }
+    return '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:22px 0;border:1px solid #dee2e6;border-radius:13px;background:#ffffff">'
+        .'<tr><td style="width:150px;padding:14px;vertical-align:middle">'.$cover.'</td>'
+        .'<td style="padding:18px 18px 18px 6px;vertical-align:middle;font-family:Arial,sans-serif">'
+        .'<div style="font-size:19px;font-weight:700;line-height:1.3;color:#111827">'.$title.'</div>'
+        .($artist!==''?'<div style="font-size:14px;line-height:1.5;color:#6c757d;margin-top:6px">'.$artist.'</div>':'')
+        .'</td></tr></table>';
+}
+function album_share_mail_html(array $album,string $url,string $message='',?string $coverUrl=null): string {
+    $content='<p style="margin:0 0 16px">'.e(t('mail.share_intro',replace:['album'=>(string)$album['title']])).'</p>';
+    if($message!==''){
+        $content.='<div style="padding:15px 17px;border-left:4px solid #0d6efd;background:#f3f6fa;border-radius:0 8px 8px 0;margin:18px 0">'.nl2br(e($message)).'</div>';
+    }
+    $content.=album_mail_card($album,$coverUrl);
+    $content.='<p style="font-size:12px;color:#6c757d;word-break:break-all;margin:18px 0 0">'.e($url).'</p>';
+    return system_mail_layout(t('mail.share_subject',replace:['album'=>(string)$album['title']]),$content,t('mail.open_album'),$url);
+}
+function collaboration_mail_html(string $username,array $album,string $url,?string $coverUrl=null): string {
+    $content='<p style="margin:0 0 16px">'.e(t('mail.collaboration_body',replace:['user'=>$username,'album'=>(string)$album['title']])).'</p>'
+        .album_mail_card($album,$coverUrl)
+        .'<p style="font-size:12px;color:#6c757d;word-break:break-all;margin:18px 0 0">'.e($url).'</p>';
+    return system_mail_layout(t('mail.collaboration_subject',replace:['album'=>(string)$album['title']]),$content,t('mail.open_album'),$url);
+}
+
 function password_reset_mail_html(string $name, string $url): string {
     return '<p>' . e(t('password_reset.hello', replace:['name'=>$name])) . '</p>'
         . '<p>' . e(t('password_reset.request_text')) . '</p>'
@@ -184,9 +237,84 @@ function password_reset_mail_html(string $name, string $url): string {
         . '<p style="color:#666">' . e($url) . '</p>';
 }
 
+
+function login_attempt_key(string $login): string {
+    $ip=(string)($_SERVER['REMOTE_ADDR']??'');
+    return hash('sha256',mb_strtolower(trim($login)).'|'.$ip);
+}
+function login_is_rate_limited(string $login): bool {
+    global $pdo;
+    try{
+        $key=login_attempt_key($login);
+        $stmt=$pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE login_key=? AND successful=0 AND attempted_at>=DATE_SUB(NOW(),INTERVAL 15 MINUTE)");
+        $stmt->execute([$key]);
+        return (int)$stmt->fetchColumn()>=5;
+    }catch(Throwable $e){return false;}
+}
+function record_login_attempt(string $login,bool $successful): void {
+    global $pdo;
+    try{
+        $key=login_attempt_key($login);
+        $pdo->prepare('INSERT INTO login_attempts(login_key,attempted_at,successful) VALUES(?,NOW(),?)')->execute([$key,$successful?1:0]);
+        if($successful)$pdo->prepare('DELETE FROM login_attempts WHERE login_key=?')->execute([$key]);
+        else $pdo->exec("DELETE FROM login_attempts WHERE attempted_at<DATE_SUB(NOW(),INTERVAL 2 DAY)");
+    }catch(Throwable $e){}
+}
+function register_user_session(int $userId): void {
+    global $pdo;
+    if($userId<1)return;
+    $token=bin2hex(random_bytes(32));
+    $_SESSION['session_token']=$token;
+    $ua=mb_substr((string)($_SERVER['HTTP_USER_AGENT']??''),0,255);
+    $ip=(string)($_SERVER['REMOTE_ADDR']??'');
+    $ipHint=$ip!==''?preg_replace('/(\d+\.\d+)\.\d+\.\d+/','$1.x.x',$ip):'';
+    try{$pdo->prepare("INSERT INTO user_sessions(session_token,user_id,created_at,last_seen_at,expires_at,ip_hint,user_agent_hint) VALUES(?,?,NOW(),NOW(),DATE_ADD(NOW(),INTERVAL 30 DAY),?,?)")->execute([$token,$userId,$ipHint,$ua]);}catch(Throwable $e){}
+}
+function sync_user_session(): void {
+    global $pdo;
+    if(!is_logged_in())return;
+    $uid=(int)($_SESSION['user_id']??0);$token=(string)($_SESSION['session_token']??'');
+    try{
+        if($token===''){register_user_session($uid);return;}
+        $stmt=$pdo->prepare('SELECT revoked_at,expires_at FROM user_sessions WHERE session_token=? AND user_id=?');
+        $stmt->execute([$token,$uid]);$row=$stmt->fetch();
+        if(!$row||$row['revoked_at']||strtotime((string)$row['expires_at'])<time()){
+            $_SESSION=[];session_destroy();return;
+        }
+        $pdo->prepare('UPDATE user_sessions SET last_seen_at=NOW(),expires_at=DATE_ADD(NOW(),INTERVAL 30 DAY) WHERE session_token=?')->execute([$token]);
+    }catch(Throwable $e){}
+}
+function revoke_current_session(): void {
+    global $pdo;
+    $token=(string)($_SESSION['session_token']??'');
+    if($token!==''){try{$pdo->prepare('UPDATE user_sessions SET revoked_at=NOW() WHERE session_token=?')->execute([$token]);}catch(Throwable $e){}}
+}
+function cleanup_statistics_retention(): void {
+    global $pdo;
+    $days=(int)get_setting('statistics_retention_days','0');
+    if($days<1)return;
+    try{$pdo->prepare('DELETE FROM statistics_daily WHERE event_date<DATE_SUB(CURDATE(),INTERVAL ? DAY)')->execute([$days]);}catch(Throwable $e){}
+}
+function accessible_album_condition(string $alias='a'): array {
+    if(is_admin())return ['1=1',[]];
+    $uid=(int)(current_user()['id']??0);
+    return ["({$alias}.owner_user_id=? OR EXISTS(SELECT 1 FROM album_collaborators acx WHERE acx.album_id={$alias}.id AND acx.user_id=?))",[$uid,$uid]];
+}
+function directory_size(string $path): int {
+    if(!is_dir($path))return 0;$size=0;
+    try{foreach(new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path,FilesystemIterator::SKIP_DOTS)) as $file){if($file->isFile())$size+=$file->getSize();}}catch(Throwable $e){}
+    return $size;
+}
+function human_bytes(int $bytes): string {
+    $units=['B','KB','MB','GB','TB'];$i=0;$value=max(0,$bytes);
+    while($value>=1024&&$i<count($units)-1){$value/=1024;$i++;}
+    return number_format($value,$i===0?0:1,',','.').' '.$units[$i];
+}
+
 function statistics_enabled(): bool { return get_setting('statistics_enabled','0') === '1'; }
 function record_statistic(string $type, int $albumId, int $shareId = 0, int $trackId = 0): void {
     global $pdo;
+    if(random_int(1,100)===1) cleanup_statistics_retention();
     if (!statistics_enabled() || $albumId < 1) return;
     if (!in_array($type, ['album_view','track_play','track_download','album_download'], true)) return;
     try {
@@ -340,6 +468,7 @@ function render_header(string $title, bool $admin = false): void {
         echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" value="'.$searchValue.'" placeholder="'.e(t('search_albums')).'" aria-label="'.e(t('search_albums')).'"></div></form>';
         echo '<div class="navbar-nav align-items-lg-center gap-lg-2 ms-lg-4">';
         echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>'.e(t('albums')).'</a>';
+        echo '<a class="nav-link" href="'.base_url('admin/statistics_overview.php').'"><i class="bi bi-bar-chart-line me-2"></i>'.e(t('stats.title')).'</a>';
         echo '<a class="nav-link" href="'.base_url('admin/profile.php').'"><i class="bi bi-person-circle me-2"></i>'.e(t('profile.title')).'</a>';
         if (is_admin()) { global $pdo; $trashCount=(int)$pdo->query("SELECT COUNT(*) FROM albums WHERE deleted_at IS NOT NULL")->fetchColumn(); if($trashCount>0){ echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>'.e(t('trash')).' <span class="badge text-bg-secondary ms-1">'.$trashCount.'</span></a>'; } echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>'.e(t('settings')).'</a>'; }
         echo '<div class="dropdown"><button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="'.e(t('appearance')).'" title="'.e(t('appearance')).'"><i class="bi bi-circle-half"></i></button><ul class="dropdown-menu dropdown-menu-end theme-menu"><li><button class="dropdown-item theme-option" type="button" data-theme="auto"><i class="bi bi-display me-2"></i>'.e(t('system')).'<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="light"><i class="bi bi-sun me-2"></i>'.e(t('light')).'<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="dark"><i class="bi bi-moon-stars me-2"></i>'.e(t('dark')).'<span class="theme-check ms-auto"></span></button></li></ul></div>';

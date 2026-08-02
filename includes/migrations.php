@@ -80,6 +80,25 @@ function run_migrations(PDO $pdo): void {
             KEY idx_password_reset_expiry(expires_at),
             CONSTRAINT fk_password_reset_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS login_attempts (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            login_key CHAR(64) NOT NULL,
+            attempted_at DATETIME NOT NULL,
+            successful TINYINT(1) NOT NULL DEFAULT 0,
+            KEY idx_login_attempts_key_time(login_key,attempted_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS user_sessions (
+            session_token CHAR(64) PRIMARY KEY,
+            user_id INT UNSIGNED NOT NULL,
+            created_at DATETIME NOT NULL,
+            last_seen_at DATETIME NOT NULL,
+            expires_at DATETIME NOT NULL,
+            revoked_at DATETIME NULL,
+            ip_hint VARCHAR(64) NOT NULL DEFAULT '',
+            user_agent_hint VARCHAR(255) NOT NULL DEFAULT '',
+            KEY idx_user_sessions_user(user_id,last_seen_at),
+            CONSTRAINT fk_user_sessions_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     } catch (Throwable $e) {
         // Bestehende Installationen bleiben nutzbar, auch wenn der DB-Benutzer keine ALTER-Rechte besitzt.
     }

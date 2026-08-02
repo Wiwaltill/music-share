@@ -12,6 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         set_setting('site_name', mb_substr($siteName, 0, 120));
         set_setting('album_colors_enabled', isset($_POST['album_colors_enabled']) ? '1' : '0');
         set_setting('statistics_enabled', isset($_POST['statistics_enabled']) ? '1' : '0');
+        set_setting('dashboard_statistics_cards', isset($_POST['dashboard_statistics_cards']) ? '1' : '0');
+        $retention=(int)($_POST['statistics_retention_days']??0);
+        if(!in_array($retention,[0,90,180,365],true))$retention=0;
+        set_setting('statistics_retention_days',(string)$retention);
         $language = (string)($_POST['language'] ?? 'de');
         if (!array_key_exists($language, supported_languages())) $language = 'de';
         set_setting('language', $language);
@@ -107,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $users = $pdo->query('SELECT id,username,email,role,is_active,created_at FROM users ORDER BY username')->fetchAll();
 render_header(t('page.settings.title'), true);
 ?>
-<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1"><?=e(t('page.settings.title'))?></h1><p class="text-body-secondary mb-0"><?=e(t('text.seitendarstellung.und.zugange.verwalten'))?></p></div><a class="btn btn-outline-primary" href="update.php"><?=e(t('text.updates'))?></a></div>
+<div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1"><?=e(t('page.settings.title'))?></h1><p class="text-body-secondary mb-0"><?=e(t('text.seitendarstellung.und.zugange.verwalten'))?></p></div><div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="system_status.php"><i class="bi bi-activity me-1"></i><?=e(t('status.title'))?></a><a class="btn btn-outline-primary" href="update.php"><?=e(t('text.updates'))?></a></div></div>
 <div class="vstack gap-4">
   <section id="general">
     <div class="card shadow-sm border-0"><div class="card-header bg-body py-3"><h2 class="h5 mb-0"><i class="bi bi-sliders me-2"></i><?=e(t('text.allgemein'))?></h2></div><div class="card-body p-4">
@@ -124,7 +128,7 @@ render_header(t('page.settings.title'), true);
           </select>
           <div class="form-text"><?=e(t('text.die.systemsprache.gilt.fur.backend.offentliche.seiten.und.systemmeldungen'))?></div>
         </div><div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" role="switch" id="album_colors_enabled" name="album_colors_enabled" <?=get_setting('album_colors_enabled','0')==='1'?'checked':''?>> <label class="form-check-label" for="album_colors_enabled"><?=e(t('text.albumfarben.aus.dem.cover.auf.offentlichen.seiten.verwenden'))?></label></div><div class="form-text"><?=e(t('text.ist.die.funktion.deaktiviert.wird.die.neutrale.glasdarstellung.verwendet'))?></div>
-        <div class="form-check form-switch mt-4"><input class="form-check-input" type="checkbox" role="switch" id="statistics_enabled" name="statistics_enabled" <?=statistics_enabled()?'checked':''?>> <label class="form-check-label" for="statistics_enabled"><?=e(t('stats.enable'))?></label></div><div class="form-text"><?=e(t('stats.privacy_help'))?></div><button class="btn btn-primary mt-3"><?=e(t('text.speichern'))?></button>
+        <div class="form-check form-switch mt-4"><input class="form-check-input" type="checkbox" role="switch" id="statistics_enabled" name="statistics_enabled" <?=statistics_enabled()?'checked':''?>> <label class="form-check-label" for="statistics_enabled"><?=e(t('stats.enable'))?></label></div><div class="form-text"><?=e(t('stats.privacy_help'))?></div><div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" role="switch" id="dashboard_statistics_cards" name="dashboard_statistics_cards" <?=get_setting('dashboard_statistics_cards','1')==='1'?'checked':''?>><label class="form-check-label" for="dashboard_statistics_cards"><?=e(t('dashboard.cards_enable'))?></label></div><div class="form-text"><?=e(t('dashboard.cards_help'))?></div><div class="mt-3"><label class="form-label" for="statistics_retention_days"><?=e(t('stats.retention'))?></label><select class="form-select" id="statistics_retention_days" name="statistics_retention_days"><?php foreach([0=>'stats.retention_unlimited',90=>'stats.retention_90',180=>'stats.retention_180',365=>'stats.retention_365'] as $days=>$label):?><option value="<?=$days?>" <?=get_setting('statistics_retention_days','0')===(string)$days?'selected':''?>><?=e(t($label))?></option><?php endforeach?></select><div class="form-text"><?=e(t('stats.retention_help'))?></div></div><button class="btn btn-primary mt-3"><?=e(t('text.speichern'))?></button>
       </form>
     </div></div>
   </section>

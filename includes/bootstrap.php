@@ -31,4 +31,5 @@ try {
 
 require_once __DIR__.'/migrations.php';
 run_migrations($pdo);
+sync_user_session();
 
