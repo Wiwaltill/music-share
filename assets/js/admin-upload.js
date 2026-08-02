@@ -160,6 +160,19 @@
   function be24(array, offset) { return (array[offset] << 16) | (array[offset + 1] << 8) | array[offset + 2]; }
   function be32(array, offset) { return ((array[offset] << 24) >>> 0) + (array[offset + 1] << 16) + (array[offset + 2] << 8) + array[offset + 3]; }
 
+
+  function readAudioDuration(file) {
+    return new Promise(resolve => {
+      const audio = document.createElement('audio');
+      const url = URL.createObjectURL(file);
+      const done = value => { URL.revokeObjectURL(url); audio.remove(); resolve(Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0); };
+      audio.preload = 'metadata';
+      audio.addEventListener('loadedmetadata', () => done(audio.duration), {once:true});
+      audio.addEventListener('error', () => done(0), {once:true});
+      audio.src = url;
+    });
+  }
+
   async function makeItem(file, tags) {
     const title = tags.title || file.name.replace(/\.[^.]+$/, '');
     const disc = positiveNumber(tags.disc) || 1;
@@ -172,10 +185,11 @@
     el.querySelector('.title').value = title;
     el.querySelector('.tag-order').textContent = track ? `MP3-Reihenfolge: CD ${disc}, Titel ${track}` : `CD ${disc} · keine TRACK-Nummer erkannt`;
     queue.append(el);
-    await upload(file, el, disc, track);
+    const duration = await readAudioDuration(file);
+    await upload(file, el, disc, track, duration);
   }
 
-  function upload(file, el, disc, track) {
+  function upload(file, el, disc, track, duration) {
     return new Promise(resolve => {
       const fd = new FormData();
       fd.append('csrf', cfg.csrf);
@@ -184,6 +198,7 @@
       fd.append('title', el.querySelector('.title').value);
       fd.append('disc_no', String(disc));
       fd.append('track_no', String(track));
+      fd.append('duration', String(duration || 0));
       const xhr = new XMLHttpRequest();
       xhr.open('POST', cfg.uploadUrl);
       xhr.upload.onprogress = event => {

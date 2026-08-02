@@ -177,7 +177,7 @@ function render_header(string $title, bool $admin = false): void {
         echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" value="'.$searchValue.'" placeholder="Alben durchsuchen …" aria-label="Alben durchsuchen"></div></form>';
         echo '<div class="navbar-nav align-items-lg-center gap-lg-2 ms-lg-4">';
         echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>Alben</a>';
-        if (is_admin()) { echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>Papierkorb</a>'; echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>Einstellungen</a>'; }
+        if (is_admin()) { global $pdo; $trashCount=(int)$pdo->query("SELECT COUNT(*) FROM albums WHERE deleted_at IS NOT NULL")->fetchColumn(); if($trashCount>0){ echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>Papierkorb <span class="badge text-bg-secondary ms-1">'.$trashCount.'</span></a>'; } echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>Einstellungen</a>'; }
         echo '<div class="dropdown"><button class="btn btn-sm btn-outline-light dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-circle-half me-2"></i>Erscheinungsbild</button><ul class="dropdown-menu dropdown-menu-end theme-menu"><li><button class="dropdown-item theme-option" type="button" data-theme="auto"><i class="bi bi-display me-2"></i>System<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="light"><i class="bi bi-sun me-2"></i>Hell<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="dark"><i class="bi bi-moon-stars me-2"></i>Dunkel<span class="theme-check ms-auto"></span></button></li></ul></div>';
         echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'"><i class="bi bi-box-arrow-right me-2"></i>Abmelden</a>';
         echo '</div></div>';
@@ -749,4 +749,62 @@ function restore_migration_backup(string $root, PDO $pdo, string $file): void {
         recursive_copy_update($uploadsSource, $uploadsTarget, []);
     }
     remove_directory_tree($tmp);
+}
+
+/**
+ * Estimate MP3 duration from the first MPEG audio frame. This is exact for CBR
+ * files and a useful fallback for VBR files when no duration was supplied by
+ * the browser during upload.
+ */
+function music_share_mp3_duration_seconds(string $path): int {
+    if (!is_file($path) || filesize($path) < 128) return 0;
+    $fh = @fopen($path, 'rb');
+    if (!$fh) return 0;
+    $fileSize = (int)filesize($path);
+    $offset = 0;
+    $header = fread($fh, 10);
+    if (strlen($header) === 10 && substr($header, 0, 3) === 'ID3') {
+        $tagSize = ((ord($header[6]) & 0x7f) << 21) | ((ord($header[7]) & 0x7f) << 14) | ((ord($header[8]) & 0x7f) << 7) | (ord($header[9]) & 0x7f);
+        $offset = 10 + $tagSize + (($header[5] & "\x10") !== "\0" ? 10 : 0);
+    }
+    fseek($fh, $offset);
+    $scan = fread($fh, min(1024 * 1024, max(0, $fileSize - $offset)));
+    fclose($fh);
+    $len = strlen($scan);
+    $bitrates = [
+        '1-3'=>[0,32,40,48,56,64,80,96,112,128,160,192,224,256,320,0],
+        '1-2'=>[0,32,48,56,64,80,96,112,128,160,192,224,256,320,384,0],
+        '1-1'=>[0,32,64,96,128,160,192,224,256,288,320,352,384,416,448,0],
+        '2-3'=>[0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,0],
+        '2-2'=>[0,8,16,24,32,40,48,56,64,80,96,112,128,144,160,0],
+        '2-1'=>[0,32,48,56,64,80,96,112,128,144,160,176,192,224,256,0],
+    ];
+    for ($i=0; $i+4 <= $len; $i++) {
+        $b1=ord($scan[$i]); $b2=ord($scan[$i+1]); $b3=ord($scan[$i+2]);
+        if ($b1 !== 0xFF || ($b2 & 0xE0) !== 0xE0) continue;
+        $verBits=($b2>>3)&3; $layerBits=($b2>>1)&3; $brIndex=($b3>>4)&15; $srIndex=($b3>>2)&3;
+        if ($verBits===1 || $layerBits===0 || $brIndex===0 || $brIndex===15 || $srIndex===3) continue;
+        $version = $verBits===3 ? '1' : '2';
+        $layer = 4-$layerBits;
+        $key=$version.'-'.$layer;
+        $kbps=$bitrates[$key][$brIndex] ?? 0;
+        if ($kbps<=0) continue;
+        $audioBytes=max(0,$fileSize-$offset);
+        return max(1,(int)round(($audioBytes*8)/($kbps*1000)));
+    }
+    return 0;
+}
+
+function music_share_backfill_track_durations(PDO $pdo, array &$tracks): void {
+    $update = null;
+    foreach ($tracks as &$track) {
+        if ((int)($track['duration_seconds'] ?? 0) > 0) continue;
+        $file = dirname(__DIR__) . '/uploads/audio/' . basename((string)($track['audio_file'] ?? ''));
+        $duration = music_share_mp3_duration_seconds($file);
+        if ($duration <= 0) continue;
+        $track['duration_seconds'] = $duration;
+        $update ??= $pdo->prepare('UPDATE tracks SET duration_seconds=? WHERE id=?');
+        $update->execute([$duration, (int)$track['id']]);
+    }
+    unset($track);
 }
