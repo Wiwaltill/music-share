@@ -192,7 +192,9 @@ function record_statistic(string $type, int $albumId, int $shareId = 0, int $tra
     try {
         $stmt=$pdo->prepare("INSERT INTO statistics_daily(event_date,album_id,share_id,track_id,event_type,event_count) VALUES(CURDATE(),?,?,?,?,1) ON DUPLICATE KEY UPDATE event_count=event_count+1");
         $stmt->execute([$albumId,max(0,$shareId),max(0,$trackId),$type]);
-    } catch (Throwable $e) {}
+    } catch (Throwable $e) {
+        error_log('Music Share statistic failed ['.$type.']: '.$e->getMessage());
+    }
 }
 function statistics_album_totals(int $albumId, int $days = 0): array {
     global $pdo;
