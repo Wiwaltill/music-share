@@ -75,6 +75,12 @@ function set_setting(string $key, string $value): void {
 }
 
 
+function default_system_email(): string {
+    global $config;
+    $host = (string)(parse_url((string)($config['app']['base_url'] ?? ''), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    $host = preg_replace('/:\d+$/', '', strtolower($host));
+    return 'music-share@' . $host;
+}
 function smtp_read_response($socket): string {
     $response = '';
     while (($line = fgets($socket, 515)) !== false) {
@@ -95,7 +101,7 @@ function smtp_command($socket, string $command, array $codes): string {
 }
 function send_system_mail(string $to, string $subject, string $html): bool {
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
-    $fromEmail = trim((string)get_setting('mail_from_email', ''));
+    $fromEmail = trim((string)get_setting('mail_from_email', default_system_email()));
     $fromName = trim((string)get_setting('mail_from_name', app_name()));
     if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) return false;
 
@@ -334,7 +340,7 @@ function render_header(string $title, bool $admin = false): void {
         echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>'.e(t('albums')).'</a>';
         echo '<a class="nav-link" href="'.base_url('admin/profile.php').'"><i class="bi bi-person-circle me-2"></i>'.e(t('profile.title')).'</a>';
         if (is_admin()) { global $pdo; $trashCount=(int)$pdo->query("SELECT COUNT(*) FROM albums WHERE deleted_at IS NOT NULL")->fetchColumn(); if($trashCount>0){ echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>'.e(t('trash')).' <span class="badge text-bg-secondary ms-1">'.$trashCount.'</span></a>'; } echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>'.e(t('settings')).'</a>'; }
-        echo '<div class="dropdown"><button class="btn btn-sm btn-outline-light dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-circle-half me-2"></i>'.e(t('appearance')).'</button><ul class="dropdown-menu dropdown-menu-end theme-menu"><li><button class="dropdown-item theme-option" type="button" data-theme="auto"><i class="bi bi-display me-2"></i>'.e(t('system')).'<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="light"><i class="bi bi-sun me-2"></i>'.e(t('light')).'<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="dark"><i class="bi bi-moon-stars me-2"></i>'.e(t('dark')).'<span class="theme-check ms-auto"></span></button></li></ul></div>';
+        echo '<div class="dropdown"><button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="'.e(t('appearance')).'" title="'.e(t('appearance')).'"><i class="bi bi-circle-half"></i></button><ul class="dropdown-menu dropdown-menu-end theme-menu"><li><button class="dropdown-item theme-option" type="button" data-theme="auto"><i class="bi bi-display me-2"></i>'.e(t('system')).'<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="light"><i class="bi bi-sun me-2"></i>'.e(t('light')).'<span class="theme-check ms-auto"></span></button></li><li><button class="dropdown-item theme-option" type="button" data-theme="dark"><i class="bi bi-moon-stars me-2"></i>'.e(t('dark')).'<span class="theme-check ms-auto"></span></button></li></ul></div>';
         echo '<a class="btn btn-sm btn-outline-light" href="'.base_url('admin/logout.php').'" aria-label="'.e(t('logout')).'" title="'.e(t('logout')).'"><i class="bi bi-box-arrow-right"></i></a>';
         echo '</div></div>';
     }

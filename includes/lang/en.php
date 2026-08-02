@@ -114,6 +114,7 @@ return [
     'profile.username_help' => 'Letters, numbers, dots, hyphens and underscores are allowed.',
     'search_albums' => 'Search albums …',
     'settings' => 'Settings',
+    'settings.users_existing' => 'Existing users',
     'share.invalid_or_expired' => 'This share link is invalid or expired.',
     'shares.none_short' => 'No shares yet.',
     'stats.30days' => '30 days',

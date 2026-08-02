@@ -1,5 +1,6 @@
 <?php
 return [
+    'admin_email' => 'Email address',
     'admin_password_min' => 'The administrator password must contain at least 8 characters.',
     'administrator' => 'Administrator',
     'application' => 'Application',
@@ -8,12 +9,17 @@ return [
     'database' => 'Database',
     'db' => 'Database',
     'host' => 'Host',
+    'invalid_admin_email' => 'Please enter a valid email address for the administrator account.',
+    'invalid_system_email' => 'Please enter a valid system email address.',
     'invalid_url' => 'Please enter a valid base URL including http:// or https://.',
     'language' => 'Language',
     'name' => 'Name',
     'password' => 'Password',
     'port' => 'Port',
     'start' => 'Start installation',
+    'system_email' => 'System email address',
+    'system_email_help' => 'Used as the sender for system emails and suggested from the current domain.',
     'title' => 'Install Album Share',
     'user' => 'User',
+    'username' => 'Username',
 ];

@@ -108,10 +108,9 @@ $users = $pdo->query('SELECT id,username,email,role,is_active,created_at FROM us
 render_header(t('page.settings.title'), true);
 ?>
 <div class="d-flex justify-content-between align-items-start mb-4"><div><h1 class="h2 mb-1"><?=e(t('page.settings.title'))?></h1><p class="text-body-secondary mb-0"><?=e(t('text.seitendarstellung.und.zugange.verwalten'))?></p></div><a class="btn btn-outline-primary" href="update.php"><?=e(t('text.updates'))?></a></div>
-<div class="row g-4">
-  <div class="col-lg-5">
-    <div class="card shadow-sm"><div class="card-body p-4">
-      <h2 class="h5"><?=e(t('text.allgemein'))?></h2>
+<div class="vstack gap-4">
+  <section id="general">
+    <div class="card shadow-sm border-0"><div class="card-header bg-body py-3"><h2 class="h5 mb-0"><i class="bi bi-sliders me-2"></i><?=e(t('text.allgemein'))?></h2></div><div class="card-body p-4">
       <form method="post">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="site">
         <label class="form-label" for="site_name"><?=e(t('text.site.name'))?></label>
@@ -128,17 +127,16 @@ render_header(t('page.settings.title'), true);
         <div class="form-check form-switch mt-4"><input class="form-check-input" type="checkbox" role="switch" id="statistics_enabled" name="statistics_enabled" <?=statistics_enabled()?'checked':''?>> <label class="form-check-label" for="statistics_enabled"><?=e(t('stats.enable'))?></label></div><div class="form-text"><?=e(t('stats.privacy_help'))?></div><button class="btn btn-primary mt-3"><?=e(t('text.speichern'))?></button>
       </form>
     </div></div>
-  </div>
+  </section>
   
-  <div class="col-12" id="mail">
-    <div class="card shadow-sm mb-4"><div class="card-body p-4">
-      <h2 class="h5"><?=e(t('mail.settings'))?></h2>
+  <section id="mail">
+    <div class="card shadow-sm border-0"><div class="card-header bg-body py-3"><h2 class="h5 mb-0"><i class="bi bi-envelope-gear me-2"></i><?=e(t('mail.settings'))?></h2></div><div class="card-body p-4">
       <p class="text-body-secondary"><?=e(t('mail.settings_help'))?></p>
       <form method="post" class="row g-3">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="mail">
         <div class="col-md-3"><label class="form-label"><?=e(t('mail.method'))?></label><select class="form-select" name="mail_method"><option value="mail" <?=get_setting('mail_method','mail')==='mail'?'selected':''?>>PHP mail()</option><option value="smtp" <?=get_setting('mail_method','mail')==='smtp'?'selected':''?>>SMTP</option></select></div>
         <div class="col-md-4"><label class="form-label"><?=e(t('mail.from_name'))?></label><input class="form-control" name="mail_from_name" value="<?=e(get_setting('mail_from_name',app_name()))?>"></div>
-        <div class="col-md-5"><label class="form-label"><?=e(t('mail.from_email'))?></label><input type="email" class="form-control" name="mail_from_email" value="<?=e(get_setting('mail_from_email',''))?>" required></div>
+        <div class="col-md-5"><label class="form-label"><?=e(t('mail.from_email'))?></label><input type="email" class="form-control" name="mail_from_email" value="<?=e(get_setting('mail_from_email',default_system_email()))?>" required></div>
         <div class="col-md-5"><label class="form-label"><?=e(t('mail.smtp_host'))?></label><input class="form-control" name="smtp_host" value="<?=e(get_setting('smtp_host',''))?>"></div>
         <div class="col-md-2"><label class="form-label"><?=e(t('mail.smtp_port'))?></label><input type="number" min="1" max="65535" class="form-control" name="smtp_port" value="<?=e(get_setting('smtp_port','587'))?>"></div>
         <div class="col-md-2"><label class="form-label"><?=e(t('mail.encryption'))?></label><select class="form-select" name="smtp_encryption"><?php foreach(['none'=>'–','tls'=>'STARTTLS','ssl'=>'SSL/TLS'] as $k=>$v):?><option value="<?=$k?>" <?=get_setting('smtp_encryption','tls')===$k?'selected':''?>><?=$v?></option><?php endforeach?></select></div>
@@ -153,10 +151,9 @@ render_header(t('page.settings.title'), true);
         <div class="col-md-auto"><button class="btn btn-outline-primary"><?=e(t('mail.send_test'))?></button></div>
       </form>
     </div></div>
-  </div>
-<div class="col-lg-7" id="users">
-    <div class="card shadow-sm mb-4"><div class="card-body p-4">
-      <h2 class="h5"><?=e(t('text.benutzer.hinzufugen'))?></h2>
+  </section>
+<section id="users">
+    <div class="card shadow-sm border-0 mb-4"><div class="card-header bg-body py-3"><h2 class="h5 mb-0"><i class="bi bi-person-plus me-2"></i><?=e(t('text.benutzer.hinzufugen'))?></h2></div><div class="card-body p-4">
       <form method="post" class="row g-3">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="create_user">
         <div class="col-md-6"><label class="form-label"><?=e(t('text.benutzername'))?></label><input class="form-control" name="username" required></div>
@@ -166,8 +163,9 @@ render_header(t('page.settings.title'), true);
         <div class="col-12"><button class="btn btn-primary"><?=e(t('text.benutzer.anlegen'))?></button></div>
       </form>
     </div></div>
+    <div class="d-flex align-items-center justify-content-between mb-3"><h2 class="h5 mb-0"><i class="bi bi-people me-2"></i><?=e(t('settings.users_existing'))?></h2><span class="badge text-bg-secondary"><?=count($users)?></span></div>
     <?php foreach($users as $u): ?>
-    <div class="card shadow-sm mb-3"><div class="card-body">
+    <div class="card shadow-sm border-0 mb-3"><div class="card-body p-4">
       <form method="post" class="row g-3 align-items-end">
         <input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="action" value="update_user"><input type="hidden" name="user_id" value="<?=$u['id']?>">
         <div class="col-md-4"><label class="form-label"><?=e(t('text.benutzername'))?></label><input class="form-control" value="<?=e($u['username'])?>" disabled></div>
@@ -187,5 +185,6 @@ render_header(t('page.settings.title'), true);
     </div></div>
     <?php endforeach; ?>
   </div>
+</section>
 </div>
 <?php render_footer();

@@ -1,5 +1,6 @@
 <?php
 return [
+    'admin_email' => 'E-Mail-Adresse',
     'admin_password_min' => 'Das Administrator-Passwort muss mindestens 8 Zeichen lang sein.',
     'administrator' => 'Administrator',
     'application' => 'Anwendung',
@@ -8,12 +9,17 @@ return [
     'database' => 'Datenbank',
     'db' => 'Datenbank',
     'host' => 'Host',
+    'invalid_admin_email' => 'Bitte eine gültige E-Mail-Adresse für das Administratorkonto angeben.',
+    'invalid_system_email' => 'Bitte eine gültige System-E-Mail-Adresse angeben.',
     'invalid_url' => 'Bitte eine gültige Basis-URL mit http:// oder https:// angeben.',
     'language' => 'Sprache',
     'name' => 'Name',
     'password' => 'Passwort',
     'port' => 'Port',
     'start' => 'Installation starten',
+    'system_email' => 'System-E-Mail-Adresse',
+    'system_email_help' => 'Wird als Absender für Systemmails verwendet und aus der aktuellen Domain vorgeschlagen.',
     'title' => 'Album Share installieren',
     'user' => 'Benutzer',
+    'username' => 'Benutzername',
 ];

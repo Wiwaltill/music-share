@@ -114,6 +114,7 @@ return [
     'profile.username_help' => 'Les lettres, chiffres, points, tirets et traits de soulignement sont autorisés.',
     'search_albums' => 'Rechercher des albums …',
     'settings' => 'Paramètres',
+    'settings.users_existing' => 'Utilisateurs existants',
     'share.invalid_or_expired' => 'Ce lien de partage est invalide ou expiré.',
     'shares.none_short' => 'Aucun partage.',
     'stats.30days' => '30 jours',

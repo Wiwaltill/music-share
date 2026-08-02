@@ -114,6 +114,7 @@ return [
     'profile.username_help' => 'Erlaubt sind Buchstaben, Zahlen, Punkt, Bindestrich und Unterstrich.',
     'search_albums' => 'Alben durchsuchen …',
     'settings' => 'Einstellungen',
+    'settings.users_existing' => 'Vorhandene Benutzer',
     'share.invalid_or_expired' => 'Dieser Freigabelink ist ungültig oder abgelaufen.',
     'shares.none_short' => 'Noch keine Freigaben.',
     'stats.30days' => '30 Tage',

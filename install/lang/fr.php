@@ -1,5 +1,6 @@
 <?php
 return [
+    'admin_email' => 'Adresse e-mail',
     'admin_password_min' => 'Le mot de passe administrateur doit contenir au moins 8 caractères.',
     'administrator' => 'Administrateur',
     'application' => 'Application',
@@ -8,12 +9,17 @@ return [
     'database' => 'Base de données',
     'db' => 'Base de données',
     'host' => 'Hôte',
+    'invalid_admin_email' => 'Veuillez saisir une adresse e-mail valide pour le compte administrateur.',
+    'invalid_system_email' => 'Veuillez saisir une adresse e-mail système valide.',
     'invalid_url' => 'Veuillez saisir une URL de base valide avec http:// ou https://.',
     'language' => 'Langue',
     'name' => 'Nom',
     'password' => 'Mot de passe',
     'port' => 'Port',
     'start' => 'Démarrer l’installation',
+    'system_email' => 'Adresse e-mail système',
+    'system_email_help' => 'Utilisée comme expéditeur des e-mails système et proposée à partir du domaine actuel.',
     'title' => 'Installer Album Share',
     'user' => 'Utilisateur',
+    'username' => 'Nom d’utilisateur',
 ];

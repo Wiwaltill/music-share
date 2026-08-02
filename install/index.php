@@ -36,6 +36,9 @@ function detectBaseUrl(): string
 }
 
 $detectedBaseUrl = detectBaseUrl();
+$detectedHost = (string)(parse_url($detectedBaseUrl, PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+$detectedHost = preg_replace('/:\d+$/', '', strtolower($detectedHost));
+$defaultSystemEmail = 'music-share@' . $detectedHost;
 $installerLanguage = (string)($_POST['language'] ?? $_GET['language'] ?? 'de');
 if (!in_array($installerLanguage, ['de','en','fr'], true)) $installerLanguage = 'de';
 $itxt = require __DIR__ . '/lang/' . $installerLanguage . '.php';
@@ -45,11 +48,13 @@ $form = [
     'language' => $installerLanguage,
     'app_name' => 'Album Share',
     'base_url' => $detectedBaseUrl,
+    'system_email' => $defaultSystemEmail,
     'db_host' => 'localhost',
     'db_port' => '3306',
     'db_name' => '',
     'db_user' => '',
     'admin_user' => '',
+    'admin_email' => '',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -60,6 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $baseUrl = rtrim($form['base_url'], '/');
     if (!filter_var($baseUrl, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $baseUrl)) {
         $error = $itxt['invalid_url'];
+    } elseif (!filter_var($form['system_email'], FILTER_VALIDATE_EMAIL)) {
+        $error = $itxt['invalid_system_email'];
     } else {
         $cfg = [
             'app' => [
@@ -88,6 +95,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (strlen($adminPassword) < 8) {
                 throw new RuntimeException($itxt['admin_password_min']);
             }
+            if (!filter_var($form['admin_email'], FILTER_VALIDATE_EMAIL)) {
+                throw new RuntimeException($itxt['invalid_admin_email']);
+            }
 
             $dsn = sprintf(
                 'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
@@ -108,11 +118,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $pdo->exec($sql);
 
-            $stmt = $pdo->prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)');
+            $stmt = $pdo->prepare('INSERT INTO users (username, email, password_hash, role, is_active) VALUES (?, ?, ?, ?, 1)');
             $stmt->execute([
                 $form['admin_user'],
+                strtolower($form['admin_email']),
                 password_hash($adminPassword, PASSWORD_DEFAULT),
+                'admin',
             ]);
+
+            $settingStmt = $pdo->prepare('INSERT INTO settings(setting_key,setting_value) VALUES(?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)');
+            foreach ([
+                'mail_from_email' => strtolower($form['system_email']),
+                'mail_from_name' => $form['app_name'] !== '' ? $form['app_name'] : 'Album Share',
+                'mail_method' => 'mail',
+            ] as $settingKey => $settingValue) {
+                $settingStmt->execute([$settingKey, $settingValue]);
+            }
 
             $content = "<?php\ndeclare(strict_types=1);\n\nreturn " . var_export($cfg, true) . ";\n";
             if (file_put_contents($root . '/config.php', $content, LOCK_EX) === false) {
@@ -170,6 +191,11 @@ function e(string $value): string
                         <input class="form-control" type="url" id="base_url" name="base_url" value="<?= e($form['base_url']) ?>" required>
                         <div class="form-text"><?=e($itxt['base_help'])?></div>
                     </div>
+                    <div class="col-12">
+                        <label class="form-label" for="system_email"><?=e($itxt['system_email'])?></label>
+                        <input class="form-control" type="email" id="system_email" name="system_email" value="<?=e($form['system_email'])?>" required>
+                        <div class="form-text"><?=e($itxt['system_email_help'])?></div>
+                    </div>
                 </div>
 
                 <h2 class="h5 mt-4"><?=e($itxt['database'])?></h2>
@@ -199,8 +225,12 @@ function e(string $value): string
                 <h2 class="h5 mt-4"><?=e($itxt['administrator'])?></h2>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label" for="admin_user"><?=e(t('text.benutzername'))?></label>
+                        <label class="form-label" for="admin_user"><?=e($itxt['username'])?></label>
                         <input class="form-control" id="admin_user" name="admin_user" value="<?= e($form['admin_user']) ?>" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="admin_email"><?=e($itxt['admin_email'])?></label>
+                        <input type="email" class="form-control" id="admin_email" name="admin_email" value="<?=e($form['admin_email'])?>" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="admin_pass"><?=e($itxt['password'])?></label>
