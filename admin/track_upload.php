@@ -184,6 +184,13 @@ try {
     foreach($map as $col=>$tagKey){if(trim((string)($album[$col]??''))===''&&trim((string)($serverTags[$tagKey]??''))!==''){$metadataUpdates[]="$col=?";$metadataParams[]=trim((string)$serverTags[$tagKey]);}}
     if(empty($album['release_year'])&&!empty($serverTags['year'])){$metadataUpdates[]='release_year=?';$metadataParams[]=(int)$serverTags['year'];}
     if($metadataUpdates){$metadataParams[]=$albumId;$pdo->prepare('UPDATE albums SET '.implode(',',$metadataUpdates).' WHERE id=?')->execute($metadataParams);}
+    $albumTitleCandidate = '';
+    $tagAlbumTitle = trim((string)($serverTags['album'] ?? ''));
+    $currentAlbumTitle = trim((string)($album['title'] ?? ''));
+    if ($tagAlbumTitle !== '' && strcasecmp($tagAlbumTitle, $currentAlbumTitle) !== 0) {
+        $albumTitleCandidate = $tagAlbumTitle;
+    }
+
     $coverCandidate='';
     if(empty($album['cover_file'])&&!empty($serverTags['cover_data'])){$mime=$serverTags['cover_mime'];$ext=$mime==='image/png'?'png':($mime==='image/webp'?'webp':'jpg');$coverCandidate='pending-'.bin2hex(random_bytes(10)).'.'.$ext;file_put_contents(dirname(__DIR__).'/uploads/covers/'.$coverCandidate,$serverTags['cover_data']);}
 
@@ -209,7 +216,7 @@ try {
         'title' => $title,
         'disc_no' => $disc,
         'track_no' => $trackNo,
-        'cover_candidate'=>$coverCandidate,'metadata_filled'=>count($metadataUpdates),'tag_source' => ($serverTags['disc'] || $serverTags['track']) ? 'id3' : (($filenameOrder['disc'] || $filenameOrder['track']) ? 'filename' : 'browser'),
+        'cover_candidate'=>$coverCandidate,'album_title_candidate'=>$albumTitleCandidate,'current_album_title'=>$currentAlbumTitle,'metadata_filled'=>count($metadataUpdates),'tag_source' => ($serverTags['disc'] || $serverTags['track']) ? 'id3' : (($filenameOrder['disc'] || $filenameOrder['track']) ? 'filename' : 'browser'),
     ]);
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) {

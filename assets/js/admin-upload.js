@@ -1,5 +1,8 @@
 (() => {
   const cfg = window.albumUploadConfig;
+  const pendingAlbumTitles = new Map();
+  const pendingCoverCandidates = [];
+  let metadataChangedDuringUpload = false;
   if (!cfg) return;
 
   const input = document.querySelector('#trackFiles');
@@ -42,6 +45,7 @@
     for (const item of tagged) {
       await makeItem(item.file, item.tags);
     }
+    await finishUploadBatch();
     if (input) input.value = '';
   }
 
@@ -211,8 +215,12 @@
           el.querySelector('.status').className = 'badge text-bg-success status';
           el.querySelector('.status').textContent = 'Fertig';
           addTrack(response);
-          if(response.cover_candidate){const accept=confirm('In der MP3 wurde ein Cover gefunden. Möchtest du es als Albumcover übernehmen?');const cfd=new FormData();cfd.append('csrf',cfg.csrf);cfd.append('album_id',cfg.albumId);cfd.append('file',response.cover_candidate);cfd.append('accept',accept?'1':'0');fetch(cfg.coverCandidateUrl,{method:'POST',body:cfd}).then(()=>{if(accept)location.reload()});}
-          else if(response.metadata_filled>0){setTimeout(()=>location.reload(),950);}
+          if (response.album_title_candidate) {
+            const candidate = String(response.album_title_candidate).trim();
+            if (candidate) pendingAlbumTitles.set(candidate, (pendingAlbumTitles.get(candidate) || 0) + 1);
+          }
+          if (response.cover_candidate) pendingCoverCandidates.push(String(response.cover_candidate));
+          if (response.metadata_filled > 0) metadataChangedDuringUpload = true;
           setTimeout(() => el.remove(), 900);
         } else {
           el.querySelector('.status').className = 'badge text-bg-danger status';
@@ -227,6 +235,55 @@
       };
       xhr.send(fd);
     });
+  }
+
+
+  async function postDecision(url, values) {
+    const fd = new FormData();
+    fd.append('csrf', cfg.csrf);
+    fd.append('album_id', cfg.albumId);
+    Object.entries(values).forEach(([key, value]) => fd.append(key, String(value)));
+    const response = await fetch(url, {method: 'POST', body: fd});
+    if (!response.ok) throw new Error('Entscheidung konnte nicht gespeichert werden.');
+    return response.json().catch(() => ({}));
+  }
+
+  async function finishUploadBatch() {
+    let reloadRequired = metadataChangedDuringUpload;
+
+    if (pendingAlbumTitles.size) {
+      const [candidate] = [...pendingAlbumTitles.entries()].sort((a, b) => b[1] - a[1])[0];
+      const accept = confirm(`Alle Titel wurden hochgeladen. Im MP3-Tag wurde der Albumtitel „${candidate}“ gefunden. Soll der bisherige Albumtitel „${cfg.currentAlbumTitle}“ ersetzt werden?`);
+      try {
+        await postDecision(cfg.albumTitleCandidateUrl, {title: candidate, accept: accept ? '1' : '0'});
+        if (accept) {
+          cfg.currentAlbumTitle = candidate;
+          reloadRequired = true;
+        }
+      } catch (error) {
+        alert(error.message || 'Der Albumtitel konnte nicht aktualisiert werden.');
+      }
+    }
+
+    if (pendingCoverCandidates.length) {
+      const first = pendingCoverCandidates[0];
+      const accept = confirm('Alle Titel wurden hochgeladen. In einer MP3 wurde ein Cover gefunden. Möchtest du es als Albumcover übernehmen?');
+      try {
+        await postDecision(cfg.coverCandidateUrl, {file: first, accept: accept ? '1' : '0'});
+        for (const extra of pendingCoverCandidates.slice(1)) {
+          await postDecision(cfg.coverCandidateUrl, {file: extra, accept: '0'}).catch(() => {});
+        }
+        if (accept) reloadRequired = true;
+      } catch (error) {
+        alert(error.message || 'Das eingebettete Cover konnte nicht verarbeitet werden.');
+      }
+    }
+
+    pendingAlbumTitles.clear();
+    pendingCoverCandidates.length = 0;
+    metadataChangedDuringUpload = false;
+
+    if (reloadRequired) location.reload();
   }
 
   function firstList() { return boards.querySelector('.disc-track-list'); }
