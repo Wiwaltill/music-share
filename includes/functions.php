@@ -14,6 +14,13 @@ function base_url(string $path = ''): string {
     }
     return $base . '/' . ltrim($path, '/');
 }
+/** Content-based versions also invalidate browser caches between releases. */
+function asset_url(string $path): string {
+    $file = __DIR__ . '/../' . $path;
+    $hash = is_file($file) ? hash_file('sha256', $file) : false;
+    $version = $hash === false ? APP_VERSION : substr($hash, 0, 16);
+    return base_url($path . '?v=' . rawurlencode($version));
+}
 function redirect(string $path): never { header('Location: ' . base_url($path)); exit; }
 function is_logged_in(): bool { return !empty($_SESSION['user_id']); }
 function require_login(): void { if (!is_logged_in()) redirect('admin/login.php'); }
@@ -460,7 +467,7 @@ function render_header(string $title, bool $admin = false): void {
     $app = e(app_name());
     $flashes = get_flashes();
     $searchValue = e(trim((string)($_GET['q'] ?? '')));
-    echo '<!doctype html><html lang="'.e(current_language()).'"><head><script>(function(){var t=localStorage.getItem("musicshare-theme")||"auto";var d=t==="auto"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-bs-theme",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="'.base_url('assets/css/app.css?v=' . rawurlencode(APP_VERSION)).'"></head><body class="bg-body-tertiary">';
+    echo '<!doctype html><html lang="'.e(current_language()).'"><head><script>(function(){var t=localStorage.getItem("musicshare-theme")||"auto";var d=t==="auto"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-bs-theme",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="'.asset_url('assets/css/app.css').'"></head><body class="bg-body-tertiary">';
     echo '<nav class="navbar navbar-expand-lg bg-dark navbar-dark admin-navbar"><div class="container">';
     echo '<a class="navbar-brand d-flex align-items-center gap-3 me-lg-5" href="'.base_url($admin?'admin/index.php':'').'"><span class="brand-mark"><i class="bi bi-music-note-beamed"></i></span><span class="brand-copy"><span class="brand-title">'.$app.'</span><span class="brand-subtitle">'.e(t('open_source_album_manager')).'</span></span></a>';
     if ($admin && is_logged_in()) {
@@ -490,7 +497,7 @@ function render_footer(): void {
     echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>';
     echo '<script>window.MusicShareTranslations='.json_encode(js_language_catalogue(),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).';window.msT=(key,fallback)=>window.MusicShareTranslations[key]??fallback??key;</script>';
     echo '<script src="'.base_url('assets/js/dialogs.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
-    if (is_admin_request()) echo '<script src="'.base_url('assets/js/live-search.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
+    if (is_admin_request()) echo '<script src="'.asset_url('assets/js/live-search.js').'"></script>';
     echo '<script src="'.base_url('assets/js/theme.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
     echo '<script src="'.base_url('assets/js/player.js?v=' . rawurlencode(APP_VERSION)).'"></script></body></html>';
 }

@@ -8,6 +8,7 @@
   let controller;
   let revision = 0;
   let composing = false;
+  let selectingResult = false;
   const translate = key => window.msT(key, key);
   const hide = () => {
     panel.hidden = true;
@@ -49,6 +50,8 @@
         link.href = album.url;
         if (album.cover) {
           const cover = document.createElement('img');
+          cover.width = 40;
+          cover.height = 40;
           cover.src = album.cover;
           cover.alt = '';
           link.append(cover);
@@ -109,11 +112,20 @@
     if (next < 0) input.focus(); else links[next].focus();
     event.preventDefault();
   });
+  // Safari can report relatedTarget=null when a result is clicked. Keep the
+  // list in place until the pointer interaction has delivered its native click.
+  panel.addEventListener('pointerdown', () => { selectingResult = true; });
+  panel.addEventListener('mousedown', event => {
+    if (event.button === 0 && event.target.closest('a')) event.preventDefault();
+  });
+  const finishSelection = () => { setTimeout(() => { selectingResult = false; }, 0); };
+  document.addEventListener('pointerup', finishSelection);
+  document.addEventListener('pointercancel', finishSelection);
   form.addEventListener('focusout', event => {
-    if (!form.contains(event.relatedTarget)) { cancel(); hide(); }
+    if (!selectingResult && !form.contains(event.relatedTarget)) { cancel(); hide(); }
   });
   document.addEventListener('pointerdown', event => {
-    if (!form.contains(event.target)) { cancel(); hide(); }
+    if (!form.contains(event.target)) { selectingResult = false; cancel(); hide(); }
   });
   form.addEventListener('submit', () => { cancel(); hide(); });
 })();
