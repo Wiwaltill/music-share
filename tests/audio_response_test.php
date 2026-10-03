@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once __DIR__ . '/../includes/audio_response.php';
 $cases = [
     ['', 100, null], ['bytes=0-9', 100, [0, 9]],

@@ -275,14 +275,15 @@ function sync_user_session(): void {
     if(!is_logged_in())return;
     $uid=(int)($_SESSION['user_id']??0);$token=(string)($_SESSION['session_token']??'');
     try{
-        if($token===''){register_user_session($uid);return;}
-        $stmt=$pdo->prepare('SELECT revoked_at,expires_at FROM user_sessions WHERE session_token=? AND user_id=?');
+        if($token===''){$_SESSION=[];session_regenerate_id(true);return;}
+        $stmt=$pdo->prepare('SELECT s.revoked_at,s.expires_at,u.password_hash FROM user_sessions s JOIN users u ON u.id=s.user_id WHERE s.session_token=? AND s.user_id=? AND u.is_active=1');
         $stmt->execute([$token,$uid]);$row=$stmt->fetch();
-        if(!$row||$row['revoked_at']||strtotime((string)$row['expires_at'])<time()){
-            $_SESSION=[];session_destroy();return;
+        if(!$row||$row['revoked_at']||strtotime((string)$row['expires_at'])<=time() || (isset($_SESSION['password_fingerprint']) && !hash_equals((string)$_SESSION['password_fingerprint'], hash('sha256', (string)$row['password_hash'])))){
+            $_SESSION=[];session_regenerate_id(true);return;
         }
+        $_SESSION['password_fingerprint'] = hash('sha256', (string)$row['password_hash']);
         $pdo->prepare('UPDATE user_sessions SET last_seen_at=NOW(),expires_at=DATE_ADD(NOW(),INTERVAL 30 DAY) WHERE session_token=?')->execute([$token]);
-    }catch(Throwable $e){}
+    }catch(Throwable $e){error_log('Music Share session validation failed: '.$e->getMessage());$_SESSION=[];session_regenerate_id(true);}
 }
 function revoke_current_session(): void {
     global $pdo;
@@ -494,8 +495,8 @@ function render_footer(): void {
 }
 
 function share_access_granted(array $share): bool {
-    if (!empty($share['expires_at']) && strtotime((string)$share['expires_at']) < time()) return false;
-    if (!empty($share['password_hash']) && empty($_SESSION['share_ok_'.$share['id']])) return false;
+    if (!empty($share['expires_at']) && strtotime((string)$share['expires_at']) <= time()) return false;
+    if (!empty($share['password_hash']) && !hash_equals((string)$share['password_hash'], (string)($_SESSION['share_ok_'.$share['id']] ?? ''))) return false;
     return true;
 }
 
@@ -1102,4 +1103,37 @@ function music_share_backfill_track_durations(PDO $pdo, array &$tracks): void {
         $update->execute([$duration, (int)$track['id']]);
     }
     unset($track);
+}
+
+
+/** Call inside the same transaction that updates the password. */
+function revoke_user_sessions(int $userId): void {
+    global $pdo;
+    $pdo->prepare('UPDATE user_sessions SET revoked_at=NOW() WHERE user_id=? AND revoked_at IS NULL')->execute([$userId]);
+}
+
+/** Serialize attempts per share and client IP, independent of cookies/sessions. */
+function verify_share_password(array $share, string $password): string {
+    global $pdo;
+    $key = hash('sha256', 'share|' . (int)$share['id'] . '|' . (string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    $lock = 'share-password-' . substr($key, 0, 48);
+    $stmt = $pdo->prepare('SELECT GET_LOCK(?, 5)');
+    $stmt->execute([$lock]);
+    if ((int)$stmt->fetchColumn() !== 1) return 'limited';
+    try {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM login_attempts WHERE login_key=? AND successful=0 AND attempted_at>=DATE_SUB(NOW(),INTERVAL 15 MINUTE)');
+        $stmt->execute([$key]);
+        if ((int)$stmt->fetchColumn() >= 5) return 'limited';
+        if (password_verify($password, (string)$share['password_hash'])) {
+            $pdo->prepare('DELETE FROM login_attempts WHERE login_key=?')->execute([$key]);
+            $_SESSION['share_ok_' . $share['id']] = (string)$share['password_hash'];
+            return 'granted';
+        }
+        $pdo->prepare('INSERT INTO login_attempts(login_key,attempted_at,successful) VALUES(?,NOW(),0)')->execute([$key]);
+        $pdo->exec('DELETE FROM login_attempts WHERE attempted_at<DATE_SUB(NOW(),INTERVAL 2 DAY)');
+        return 'invalid';
+    } finally {
+        $stmt = $pdo->prepare('SELECT RELEASE_LOCK(?)');
+        $stmt->execute([$lock]);
+    }
 }

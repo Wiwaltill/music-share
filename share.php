@@ -22,10 +22,10 @@ if($isPreview){
         'expires_at'=>null,
     ];
 }else{
-    $s=$pdo->prepare('SELECT s.*,a.title,a.artist,a.album_artist,a.release_year,a.genre,a.label_name,a.copyright_text,a.description,a.cover_file FROM shares s JOIN albums a ON a.id=s.album_id WHERE s.token=?');
+    $s=$pdo->prepare('SELECT s.*,a.title,a.artist,a.album_artist,a.release_year,a.genre,a.label_name,a.copyright_text,a.description,a.cover_file FROM shares s JOIN albums a ON a.id=s.album_id WHERE a.deleted_at IS NULL AND s.token=?');
     $s->execute([$token]);
     $share=$s->fetch();
-    if(!$share||($share['expires_at']&&strtotime($share['expires_at'])<time())){http_response_code(404);exit(t('share.invalid_or_expired'));}
+    if(!$share||($share['expires_at']&&strtotime($share['expires_at'])<=time())){http_response_code(404);exit(t('share.invalid_or_expired'));}
 }
 $socialTitle = trim((string)$share['title']) . ' – ' . trim((string)$share['artist']);
 $socialDescription = trim((string)($share['description'] ?? ''));
@@ -42,7 +42,22 @@ $ogTags = '<meta property="og:type" content="music.album">'
     . '<meta name="twitter:title" content="'.e($socialTitle).'">'
     . '<meta name="twitter:description" content="'.e($socialDescription).'">'
     . ($socialImage !== '' ? '<meta name="twitter:image" content="'.e($socialImage).'">' : '');
-if(!$isPreview&&$share['password_hash']&&!($_SESSION['share_ok_'.$share['id']]??false)){if($_SERVER['REQUEST_METHOD']==='POST'&&password_verify($_POST['password']??'',$share['password_hash'])){$_SESSION['share_ok_'.$share['id']]=true;header('Location: '.$_SERVER['REQUEST_URI']);exit;}?><!doctype html><html lang="<?=e(current_language())?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex"><?=$ogTags?><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="<?=base_url('assets/css/app.css')?>"><title><?=e(t('page.share.protected_title'))?></title></head><body class="public-album"><main class="container min-vh-100 d-grid align-items-center"><div class="row justify-content-center"><div class="col-md-5"><div class="glass-card p-4"><h1 class="h4"><?=e(t('text.passwort.erforderlich'))?></h1><form method="post"><input type="password" class="form-control my-3" name="password" required><button class="btn btn-light"><?=e(t('text.album.offnen'))?></button></form></div></div></div></main></body></html><?php exit;}
+if(!$isPreview && !share_access_granted($share)) {
+    $passwordError = '';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        verify_csrf();
+        try {
+            $result = verify_share_password($share, (string)($_POST['password'] ?? ''));
+        } catch (Throwable $e) {
+            error_log('Music Share password check failed: ' . $e->getMessage());
+            http_response_code(503);
+            $result = 'unavailable';
+        }
+        if ($result === 'granted') { header('Location: ' . $_SERVER['REQUEST_URI']); exit; }
+        if ($result === 'limited') { http_response_code(429); header('Retry-After: 900'); }
+        $passwordError = t($result === 'limited' ? 'security.login_limited' : ($result === 'unavailable' ? 'share.password_unavailable' : 'security.login_failed'));
+    }
+?><!doctype html><html lang="<?=e(current_language())?>"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex"><?=$ogTags?><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="<?=base_url('assets/css/app.css')?>"><title><?=e(t('page.share.protected_title'))?></title></head><body class="public-album"><main class="container min-vh-100 d-grid align-items-center"><div class="row justify-content-center"><div class="col-md-5"><div class="glass-card p-4"><h1 class="h4"><?=e(t('text.passwort.erforderlich'))?></h1><?php if($passwordError):?><div class="alert alert-danger" role="alert"><?=e($passwordError)?></div><?php endif?><form method="post"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="password" class="form-control my-3" name="password" required><button class="btn btn-light"><?=e(t('text.album.offnen'))?></button></form></div></div></div></main></body></html><?php exit;}
 if(!$isPreview){
     record_statistic('album_view',(int)$share['album_id'],(int)$share['id']);
 }

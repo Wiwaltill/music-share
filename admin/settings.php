@@ -85,8 +85,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('admin/settings.php#users');
         }
         if ($password !== '') {
-            $stmt=$pdo->prepare('UPDATE users SET email=?,role=?,is_active=?,password_hash=? WHERE id=?');
-            $stmt->execute([$email,$role,$active,password_hash($password,PASSWORD_DEFAULT),$id]);
+            $pdo->beginTransaction();
+            try {
+                $stmt=$pdo->prepare('UPDATE users SET email=?,role=?,is_active=?,password_hash=? WHERE id=?');
+                $stmt->execute([$email,$role,$active,password_hash($password,PASSWORD_DEFAULT),$id]);
+                revoke_user_sessions($id);
+                $pdo->commit();
+            } catch (Throwable $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            if ($id === (int)($_SESSION['user_id'] ?? 0)) {
+                $_SESSION=[];
+                session_regenerate_id(true);
+                flash('success',t('profile.password_changed'));
+                redirect('admin/login.php');
+            }
         } else {
             $stmt=$pdo->prepare('UPDATE users SET email=?,role=?,is_active=? WHERE id=?');
             $stmt->execute([$email,$role,$active,$id]);

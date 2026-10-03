@@ -36,3 +36,7 @@ jobs:
         run: python3 tests/audio_http_test.py
       - name: Database migration regression tests
         run: php tests/migrations_test.php
+      - name: Album ZIP cache regression tests
+        run: php tests/album_archive_test.php
+      - name: Share and session security regression tests
+        run: python3 tests/security_http_test.py

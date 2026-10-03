@@ -8,7 +8,7 @@ if($albumId>0){
     $s->execute([$albumId]);
     $share=$s->fetch();
 }else{
-    $s=$pdo->prepare('SELECT s.*,a.title FROM shares s JOIN albums a ON a.id=s.album_id WHERE s.token=? AND s.allow_download=1 AND (s.expires_at IS NULL OR s.expires_at>NOW())');
+    $s=$pdo->prepare('SELECT s.*,a.title FROM shares s JOIN albums a ON a.id=s.album_id WHERE a.deleted_at IS NULL AND s.token=? AND s.allow_download=1 AND (s.expires_at IS NULL OR s.expires_at>NOW())');
     $s->execute([$token]);
     $share=$s->fetch();
     if(!$share || !share_access_granted($share)){http_response_code(403);exit;}
@@ -18,33 +18,21 @@ $s=$pdo->prepare('SELECT * FROM tracks WHERE album_id=? ORDER BY disc_no,track_n
 $s->execute([$share['album_id']]);
 $tracks=$s->fetchAll();
 session_write_close();
-$tmp=tempnam(sys_get_temp_dir(),'album_');
-$zip=new ZipArchive();
-if($zip->open($tmp,ZipArchive::OVERWRITE)!==true){http_response_code(500);exit('ZIP konnte nicht erstellt werden.');}
-$discCount=count(array_unique(array_map(static fn($t)=>(int)$t['disc_no'],$tracks)));
-$used=[];
-foreach($tracks as $t){
-    $file=__DIR__.'/uploads/audio/'.$t['audio_file'];
-    if(!is_file($file)) continue;
-    $original=basename((string)$t['original_name']);
-    if($original==='') $original=basename((string)$t['audio_file']);
-    $entry=($discCount>1?'CD '.max(1,(int)$t['disc_no']).'/':'').$original;
-    // Preserve the uploaded filename. Only identical duplicate names receive a folder suffix to avoid data loss.
-    if(isset($used[$entry])){
-        $n=2;
-        $prefix=($discCount>1?'CD '.max(1,(int)$t['disc_no']).'/':'').'Duplikat '.$n.'/';
-        while(isset($used[$prefix.$original])){$n++;$prefix=($discCount>1?'CD '.max(1,(int)$t['disc_no']).'/':'').'Duplikat '.$n.'/';}
-        $entry=$prefix.$original;
-    }
-    $used[$entry]=true;
-    $zip->addFile($file,$entry);
+if (!$tracks) { http_response_code(404); exit; }
+require_once __DIR__.'/includes/album_archive.php';
+try {
+    $archive = open_cached_album_archive(__DIR__, (int)$share['album_id'], $tracks);
+} catch (Throwable $e) {
+    error_log('Music Share album archive failed: '.$e->getMessage());
+    http_response_code(503);
+    header('Retry-After: 5');
+    exit(t('download.archive_unavailable'));
 }
-$zip->close();
 record_statistic('album_download',(int)$share['album_id'],(int)($share['id']??0));
 $name=slugify($share['title']).'.zip';
 header('Content-Type: application/zip');
 header('Content-Disposition: attachment; filename="'.$name.'"');
-header('Content-Length: '.filesize($tmp));
+header('Content-Length: '.fstat($archive)['size']);
+header('Cache-Control: private, no-store');
 header('X-Content-Type-Options: nosniff');
-readfile($tmp);
-@unlink($tmp);
+try { fpassthru($archive); } finally { fclose($archive); }

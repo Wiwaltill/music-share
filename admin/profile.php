@@ -25,8 +25,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }else{
         try{
             if($password!==''){
+                $pdo->beginTransaction();
                 $stmt=$pdo->prepare('UPDATE users SET username=?,email=?,password_hash=? WHERE id=?');
                 $stmt->execute([$username,$email,password_hash($password,PASSWORD_DEFAULT),(int)$user['id']]);
+                revoke_user_sessions((int)$user['id']);
+                $pdo->commit();
+                $_SESSION=[];
+                session_regenerate_id(true);
+                flash('success',t('profile.password_changed'));
+                redirect('admin/login.php');
             }else{
                 $stmt=$pdo->prepare('UPDATE users SET username=?,email=? WHERE id=?');
                 $stmt->execute([$username,$email,(int)$user['id']]);
@@ -34,6 +41,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             flash('success',t('profile.saved'));
             redirect('admin/profile.php');
         }catch(PDOException $e){
+            if($pdo->inTransaction())$pdo->rollBack();
             flash('danger',t('user.duplicate'));
         }
     }

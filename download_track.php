@@ -9,7 +9,7 @@ if($albumId>0){
     $s->execute([$albumId,$trackId]);
     $row=$s->fetch();
 }else{
-    $s=$pdo->prepare('SELECT s.id share_id,s.password_hash,s.expires_at,s.allow_download,t.* FROM tracks t JOIN shares s ON s.album_id=t.album_id WHERE s.token=? AND t.id=?');
+    $s=$pdo->prepare('SELECT s.id share_id,s.password_hash,s.expires_at,s.allow_download,t.* FROM tracks t JOIN shares s ON s.album_id=t.album_id JOIN albums a ON a.id=t.album_id WHERE a.deleted_at IS NULL AND s.token=? AND t.id=?');
     $s->execute([$token,$trackId]);
     $row=$s->fetch();
     if(!$row || !$row['allow_download'] || !share_access_granted(['id'=>$row['share_id'],'password_hash'=>$row['password_hash'],'expires_at'=>$row['expires_at']])){http_response_code(403);exit;}

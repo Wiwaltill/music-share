@@ -1,5 +1,8 @@
 <?php
 return [
+    'download.archive_unavailable' => 'L’archive de l’album est temporairement indisponible. Veuillez réessayer.',
+    'profile.password_changed' => 'Mot de passe modifié. Toutes les sessions ont été fermées. Veuillez vous reconnecter.',
+    'share.password_unavailable' => 'La vérification du mot de passe est temporairement indisponible. Veuillez réessayer plus tard.',
     'album.invalid_title' => 'Titre d’album invalide.',
     'album.no_title_in_tags' => 'Aucun titre d’album n’a été trouvé dans les tags MP3.',
     'albums' => 'Albums',

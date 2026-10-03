@@ -1,5 +1,8 @@
 <?php
 return [
+    'download.archive_unavailable' => 'The album archive is temporarily unavailable. Please try again.',
+    'profile.password_changed' => 'Password changed. All sessions have ended. Please sign in again.',
+    'share.password_unavailable' => 'Password verification is temporarily unavailable. Please try again later.',
     'album.invalid_title' => 'Invalid album title.',
     'album.no_title_in_tags' => 'No album title was found in the MP3 tags.',
     'albums' => 'Albums',

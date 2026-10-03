@@ -8,7 +8,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  else{$password=(string)($_POST['password']??'');$confirm=(string)($_POST['password_confirm']??'');
   if(strlen($password)<8)$error=t('password_reset.password_min');
   elseif($password!==$confirm)$error=t('password_reset.password_mismatch');
-  else{$pdo->beginTransaction();try{$pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($password,PASSWORD_DEFAULT),(int)$user['id']]);$pdo->prepare('UPDATE password_reset_tokens SET used_at=NOW() WHERE id=?')->execute([(int)$user['token_id']]);$pdo->prepare('DELETE FROM password_reset_tokens WHERE user_id=? AND id<>?')->execute([(int)$user['id'],(int)$user['token_id']]);$pdo->commit();$success=true;}catch(Throwable $e){$pdo->rollBack();$error=t('password_reset.failed');}}
+  else{$pdo->beginTransaction();try{$check=$pdo->prepare('SELECT id FROM password_reset_tokens WHERE id=? AND used_at IS NULL AND expires_at>NOW() FOR UPDATE');$check->execute([(int)$user['token_id']]);if(!$check->fetchColumn())throw new RuntimeException('Invalid reset token');$pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([password_hash($password,PASSWORD_DEFAULT),(int)$user['id']]);$pdo->prepare('UPDATE password_reset_tokens SET used_at=NOW() WHERE id=?')->execute([(int)$user['token_id']]);$pdo->prepare('DELETE FROM password_reset_tokens WHERE user_id=? AND id<>?')->execute([(int)$user['id'],(int)$user['token_id']]);revoke_user_sessions((int)$user['id']);$pdo->commit();$success=true;}catch(Throwable $e){$pdo->rollBack();$error=t('password_reset.failed');}}
  }
 }
 render_header(t('password_reset.reset_title'));?>

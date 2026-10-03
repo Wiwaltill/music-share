@@ -1,5 +1,8 @@
 <?php
 return [
+    'download.archive_unavailable' => 'Das Album-Archiv ist vorübergehend nicht verfügbar. Bitte erneut versuchen.',
+    'profile.password_changed' => 'Passwort geändert. Alle Sitzungen wurden beendet. Bitte erneut anmelden.',
+    'share.password_unavailable' => 'Die Passwortprüfung ist vorübergehend nicht verfügbar. Bitte später erneut versuchen.',
     'album.invalid_title' => 'Ungültiger Albumtitel.',
     'album.no_title_in_tags' => 'Kein Albumtitel in den MP3-Tags gefunden.',
     'albums' => 'Alben',

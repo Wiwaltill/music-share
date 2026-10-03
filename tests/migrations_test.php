@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
 require_once __DIR__ . '/../includes/migrations.php';
 $pdo = new PDO('mysql:host=127.0.0.1;port=3306;dbname=music_share_test', 'root', 'test', [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

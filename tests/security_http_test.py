@@ -1,0 +1,132 @@
+"""Check actual share, stream, download and password-change routes in a temp copy."""
+import base64
+import http.cookiejar
+import json
+import pathlib
+import re
+import shutil
+import socket
+import subprocess
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+repo = pathlib.Path(__file__).resolve().parents[1]
+
+def fixture(action, id=0):
+    return subprocess.check_output(['php', str(repo / 'tests/security_fixture.php'), action, str(id)], text=True).strip()
+
+def client():
+    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+def request(browser, path, fields=None, json_body=None):
+    data = urllib.parse.urlencode(fields).encode() if fields is not None else None
+    headers = {}
+    if json_body is not None:
+        data = json.dumps(json_body).encode()
+        headers['Content-Type'] = 'application/json'
+    try:
+        response = browser.open(urllib.request.Request(url + path, data=data, headers=headers), timeout=10)
+    except urllib.error.HTTPError as error:
+        response = error
+    with response:
+        return response.status, response.read(), response.url
+
+def csrf(browser, path):
+    status, body, _ = request(browser, path)
+    assert status == 200, (path, status, body)
+    return re.search(rb'name="csrf" value="([^"]+)"', body).group(1).decode()
+
+def login(browser, password):
+    return request(browser, '/admin/login.php', {'csrf': csrf(browser, '/admin/login.php'), 'username': 'security_test', 'password': password})
+
+ids = json.loads(fixture('seed'))
+with tempfile.TemporaryDirectory() as directory:
+    root = pathlib.Path(directory)
+    for folder in ['includes', 'admin', 'install']:
+        shutil.copytree(repo / folder, root / folder)
+    for source in repo.glob('*.php'):
+        shutil.copyfile(source, root / source.name)
+    (root / 'uploads/audio').mkdir(parents=True)
+    (root / 'uploads/covers').mkdir(parents=True)
+    (root / 'storage').mkdir()
+    (root / 'uploads/audio/test.mp3').write_bytes(b'audio fixture')
+    (root / 'uploads/covers/test.png').write_bytes(base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6ZAAAAABJRU5ErkJggg=='))
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1', 0))
+        port = sock.getsockname()[1]
+    url = f'http://127.0.0.1:{port}'
+    (root / 'config.php').write_text("<?php return ['app'=>['base_url'=>'" + url + "','language'=>'en'],'db'=>['host'=>'127.0.0.1','port'=>3306,'name'=>'music_share_test','user'=>'root','pass'=>'test']];")
+    with (root / 'server.log').open('w+') as log:
+        server = subprocess.Popen(['php', '-S', f'127.0.0.1:{port}', '-t', directory], stdout=log, stderr=log)
+        try:
+            visitor = client()
+            for _ in range(100):
+                try:
+                    request(visitor, '/share.php?token=security-share')
+                    break
+                except OSError:
+                    time.sleep(0.05)
+            stream = f'/stream.php?token=security-share&track={ids["track"]}'
+            track_download = f'/download_track.php?token=security-share&track={ids["track"]}'
+            album_download = '/download_album.php?token=security-share'
+            share_page = '/share.php?token=security-share'
+            assert request(visitor, stream)[0] == 403
+            assert request(visitor, track_download)[0] == 403
+            assert request(visitor, album_download)[0] == 403
+            assert request(visitor, share_page, {'password': 'share-password'})[0] == 419
+            # New cookie jars cannot reset the IP-based failure budget.
+            for _ in range(5):
+                attacker = client()
+                assert request(attacker, share_page, {'csrf': csrf(attacker, share_page), 'password': 'wrong'})[0] == 200
+            attacker = client()
+            assert request(attacker, share_page, {'csrf': csrf(attacker, share_page), 'password': 'share-password'})[0] == 429
+            fixture('clear-attempts')
+            assert request(visitor, share_page, {'csrf': csrf(visitor, share_page), 'password': 'share-password'})[0] == 200
+            assert request(visitor, stream)[1] == b'audio fixture'
+            assert request(visitor, album_download)[1].startswith(b'PK')
+            fixture('trash', ids['album'])
+            assert request(visitor, share_page)[0] == 404
+            for path in [stream, track_download, album_download]:
+                assert request(visitor, path)[0] == 403, path
+            assert request(visitor, '/social_cover.php?token=security-share')[0] == 404
+            stats = request(visitor, '/statistics_event.php', json_body={'type': 'track_play', 'token': 'security-share', 'track_id': ids['track']})
+            assert json.loads(stats[1])['ok'] is False
+            fixture('restore', ids['album'])
+            assert request(visitor, stream)[0] == 200
+            fixture('rotate-share-password')
+            assert request(visitor, stream)[0] == 403
+            assert request(visitor, share_page, {'csrf': csrf(visitor, share_page), 'password': 'changed-share-password'})[0] == 200
+            fixture('expire')
+            assert request(visitor, share_page)[0] == 404
+            for path in [stream, track_download, album_download]:
+                assert request(visitor, path)[0] == 403
+            # Profile password changes revoke both the current and another device.
+            first, second = client(), client()
+            assert login(first, 'initial-password')[2].endswith('/admin/index.php')
+            assert login(second, 'initial-password')[2].endswith('/admin/index.php')
+            result = request(first, '/admin/profile.php', {'csrf': csrf(first, '/admin/profile.php'), 'username': 'security_test', 'email': 'security@example.com', 'password': 'changed-password', 'password_confirm': 'changed-password'})
+            assert result[2].endswith('/admin/login.php'), result
+            assert request(second, '/admin/profile.php')[2].endswith('/admin/login.php')
+            assert login(second, 'changed-password')[2].endswith('/admin/index.php')
+            reset = fixture('reset-token', ids['user'])
+            reset_browser = client()
+            reset_path = '/admin/reset_password.php?token=' + reset
+            result = request(reset_browser, reset_path, {'csrf': csrf(reset_browser, reset_path), 'token': reset, 'password': 'reset-password', 'password_confirm': 'reset-password'})
+            assert b'alert-success' in result[1], result
+            assert request(second, '/admin/profile.php')[2].endswith('/admin/login.php')
+            assert login(second, 'reset-password')[2].endswith('/admin/index.php')
+            # Changing another account's password through user management also revokes sessions.
+            request(second, '/admin/settings.php', {'csrf': csrf(second, '/admin/settings.php'), 'action': 'update_user', 'user_id': ids['user'], 'email': 'security@example.com', 'role': 'admin', 'is_active': '1', 'password': 'admin-changed-password'})
+            assert request(second, '/admin/profile.php')[2].endswith('/admin/login.php')
+            assert login(second, 'admin-changed-password')[2].endswith('/admin/index.php')
+            print('Security HTTP tests passed.')
+        except BaseException:
+            log.flush()
+            print((root / 'server.log').read_text())
+            raise
+        finally:
+            server.terminate()
+            server.wait(timeout=5)
