@@ -13,5 +13,6 @@ if($albumId>0){
 }
 if(!$row){http_response_code(404);exit;}
 $file=__DIR__.'/uploads/audio/'.$row['audio_file']; if(!is_file($file)){http_response_code(404);exit;}
-$mime=(new finfo(FILEINFO_MIME_TYPE))->file($file); $size=filesize($file);
-header('Content-Type: '.$mime); header('Content-Length: '.$size); header('Accept-Ranges: bytes'); header('Cache-Control: private, max-age=3600'); readfile($file);
+session_write_close();
+require_once __DIR__.'/includes/audio_response.php';
+serve_audio_file($file);

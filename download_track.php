@@ -15,9 +15,10 @@ if($albumId>0){
     if(!$row || !$row['allow_download'] || !share_access_granted(['id'=>$row['share_id'],'password_hash'=>$row['password_hash'],'expires_at'=>$row['expires_at']])){http_response_code(403);exit;}
 }
 if(!$row){http_response_code(404);exit;}
-$statAlbumId=(int)$row['album_id'];$statShareId=(int)($row['share_id']??0);record_statistic('track_download',$statAlbumId,$statShareId,$trackId);
 $file=__DIR__.'/uploads/audio/'.$row['audio_file'];
 if(!is_file($file)){http_response_code(404);exit;}
+record_statistic('track_download',(int)$row['album_id'],(int)($row['share_id']??0),$trackId);
+session_write_close();
 $downloadName=basename((string)$row['original_name']);
 $fallback=preg_replace('/[^A-Za-z0-9._-]/','_',$downloadName) ?: 'audio-download';
 header('Content-Type: application/octet-stream');

@@ -87,7 +87,7 @@ Administrators can manage all albums and system settings. Users can access their
 
 ## Updates & backups
 
-The built-in updater checks GitHub releases, downloads the release archive and creates a program backup before replacing application files. It preserves `config.php`, `uploads/`, `storage/` and `.git/`. Database migrations run when the application is loaded.
+The built-in updater checks GitHub releases, downloads the release archive and creates a program backup before replacing application files. It preserves `config.php`, `uploads/`, `storage/` and `.git/`. Database migrations run once per schema version when the application is loaded. Concurrent migrations are serialized; failures are logged and return HTTP 503 until resolved.
 
 | Backup type | Contents | Purpose |
 | --- | --- | --- |
@@ -105,10 +105,10 @@ Share passwords and expiration dates are checked by the PHP share, stream and do
 
 Before hosting private material:
 
-- Deny direct HTTP access to `storage/` and `.git/` in your web-server configuration. Backups can contain database contents and configuration secrets; the supplied root `.htaccess` does not block these directories.
-- Deny direct HTTP access to `uploads/audio/` so audio is served through `stream.php` and the download endpoints. The supplied uploads `.htaccess` blocks PHP-related files, but permits direct access to audio files when their URLs are known.
+- The supplied Apache rules deny direct HTTP access to `storage/` and `.git/`. Confirm that these URLs return HTTP 403; backups can contain database contents and configuration secrets.
+- The supplied Apache rules also deny direct HTTP access to `uploads/audio/`. Audio is served through the authorized streaming and download endpoints. Streaming supports single byte ranges for seeking.
 - Keep `uploads/covers/` accessible for album artwork and social previews.
-- Confirm that Apache honors the included `.htaccess` rules, including the block on `config.php`.
+- Confirm that Apache honors the included `.htaccess` rules, including the block on `config.php`. For another web server, configure equivalent access restrictions explicitly.
 
 ## Project layout
 

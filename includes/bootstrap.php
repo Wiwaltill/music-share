@@ -30,6 +30,13 @@ try {
 }
 
 require_once __DIR__.'/migrations.php';
-run_migrations($pdo);
+try {
+    run_migrations($pdo);
+} catch (Throwable $e) {
+    error_log('Music Share migration failed: ' . $e->getMessage());
+    http_response_code(503);
+    header('Retry-After: 60');
+    exit('Database migration failed. Please check database permissions and server logs.');
+}
 sync_user_session();
 

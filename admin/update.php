@@ -17,6 +17,7 @@ if (isset($_GET['download_migration'])) {
     header('Content-Disposition: attachment; filename="' . addcslashes($backupName, '\"') . '"');
     header('Content-Length: ' . filesize($backupPath));
     header('X-Content-Type-Options: nosniff');
+    session_write_close();
     readfile($backupPath);
     exit;
 }

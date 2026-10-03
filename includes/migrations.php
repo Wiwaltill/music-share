@@ -1,8 +1,28 @@
 <?php
 declare(strict_types=1);
 
-function run_migrations(PDO $pdo): void {
+// Increment when adding a migration. The marker belongs to the database, so restores
+// cannot leave a filesystem cache claiming that an older database is up to date.
+const MUSIC_SHARE_SCHEMA_VERSION = 1;
+
+function migration_version(PDO $pdo): int {
     try {
+        return (int)$pdo->query("SELECT setting_value FROM settings WHERE setting_key='schema_version'")->fetchColumn();
+    } catch (PDOException $e) {
+        if (($e->errorInfo[1] ?? null) !== 1146) throw $e;
+        return 0; // Older installations may not have a settings table yet.
+    }
+}
+
+function run_migrations(PDO $pdo): void {
+    if (migration_version($pdo) >= MUSIC_SHARE_SCHEMA_VERSION) return;
+    $lock = 'music-share-schema-' . substr(hash('sha256', (string)$pdo->query('SELECT DATABASE()')->fetchColumn()), 0, 40);
+    $stmt = $pdo->prepare('SELECT GET_LOCK(?, 30)');
+    $stmt->execute([$lock]);
+    if ((int)$stmt->fetchColumn() !== 1) throw new RuntimeException('Database migration lock unavailable.');
+    try {
+        // Another request may have completed the migration while we waited.
+        if (migration_version($pdo) >= MUSIC_SHARE_SCHEMA_VERSION) return;
         $cols = $pdo->query("SHOW COLUMNS FROM tracks")->fetchAll(PDO::FETCH_COLUMN);
         if (!in_array('disc_no', $cols, true)) {
             $pdo->exec("ALTER TABLE tracks ADD COLUMN disc_no INT UNSIGNED NOT NULL DEFAULT 1 AFTER title");
@@ -17,7 +37,7 @@ function run_migrations(PDO $pdo): void {
         }
         if (!in_array('email', $userCols, true)) {
             $pdo->exec("ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL AFTER username");
-            try { $pdo->exec("ALTER TABLE users ADD UNIQUE KEY uq_users_email(email)"); } catch (Throwable $e) {}
+            $pdo->exec("ALTER TABLE users ADD UNIQUE KEY uq_users_email(email)");
         }
         if (!in_array('role', $userCols, true)) {
             $pdo->exec("ALTER TABLE users ADD COLUMN role ENUM('admin','user') NOT NULL DEFAULT 'user' AFTER password_hash");
@@ -99,7 +119,10 @@ function run_migrations(PDO $pdo): void {
             KEY idx_user_sessions_user(user_id,last_seen_at),
             CONSTRAINT fk_user_sessions_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-    } catch (Throwable $e) {
-        // Bestehende Installationen bleiben nutzbar, auch wenn der DB-Benutzer keine ALTER-Rechte besitzt.
+        $stmt = $pdo->prepare("INSERT INTO settings(setting_key,setting_value) VALUES('schema_version',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");
+        $stmt->execute([(string)MUSIC_SHARE_SCHEMA_VERSION]);
+    } finally {
+        $stmt = $pdo->prepare('SELECT RELEASE_LOCK(?)');
+        $stmt->execute([$lock]);
     }
 }
