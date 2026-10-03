@@ -1,5 +1,11 @@
 <?php
 return [
+    'search.loading' => 'Searching …',
+    'search.empty' => 'No matching albums found.',
+    'search.failed' => 'Search unavailable. Press Enter to search normally.',
+    'search.all' => 'View all results',
+    'search.count' => '{count} albums found.',
+
     'download.archive_unavailable' => 'The album archive is temporarily unavailable. Please try again.',
     'profile.password_changed' => 'Password changed. All sessions have ended. Please sign in again.',
     'share.password_unavailable' => 'Password verification is temporarily unavailable. Please try again later.',

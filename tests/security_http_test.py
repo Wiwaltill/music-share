@@ -69,6 +69,15 @@ with tempfile.TemporaryDirectory() as directory:
                     break
                 except OSError:
                     time.sleep(0.05)
+            assert request(visitor, '/admin/search.php?q=album')[0] == 401
+            searcher = client()
+            result = request(searcher, '/admin/login.php', {'csrf': csrf(searcher, '/admin/login.php'), 'username': 'search_user', 'password': 'search-password'})
+            assert result[2].endswith('/admin/index.php'), result
+            search_results = json.loads(request(searcher, '/admin/search.php?q=album')[1])['albums']
+            assert [item['title'] for item in search_results] == ['Security album'], search_results
+            literal_results = json.loads(request(searcher, '/admin/search.php?q=%25_')[1])['albums']
+            assert [item['title'] for item in literal_results] == ['100%_Mix'], literal_results
+            assert json.loads(request(searcher, '/admin/search.php?q=')[1])['albums'] == []
             stream = f'/stream.php?token=security-share&track={ids["track"]}'
             track_download = f'/download_track.php?token=security-share&track={ids["track"]}'
             album_download = '/download_album.php?token=security-share'
@@ -88,6 +97,7 @@ with tempfile.TemporaryDirectory() as directory:
             assert request(visitor, stream)[1] == b'audio fixture'
             assert request(visitor, album_download)[1].startswith(b'PK')
             fixture('trash', ids['album'])
+            assert json.loads(request(searcher, '/admin/search.php?q=album')[1])['albums'] == []
             assert request(visitor, share_page)[0] == 404
             for path in [stream, track_download, album_download]:
                 assert request(visitor, path)[0] == 403, path
@@ -106,6 +116,8 @@ with tempfile.TemporaryDirectory() as directory:
             # Profile password changes revoke both the current and another device.
             first, second = client(), client()
             assert login(first, 'initial-password')[2].endswith('/admin/index.php')
+            admin_results = json.loads(request(first, '/admin/search.php?q=album')[1])['albums']
+            assert {item['title'] for item in admin_results} == {'Security album', 'Private search album'}, admin_results
             assert login(second, 'initial-password')[2].endswith('/admin/index.php')
             result = request(first, '/admin/profile.php', {'csrf': csrf(first, '/admin/profile.php'), 'username': 'security_test', 'email': 'security@example.com', 'password': 'changed-password', 'password_confirm': 'changed-password'})
             assert result[2].endswith('/admin/login.php'), result

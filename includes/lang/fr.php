@@ -1,5 +1,11 @@
 <?php
 return [
+    'search.loading' => 'Recherche en cours …',
+    'search.empty' => 'Aucun album correspondant.',
+    'search.failed' => 'Recherche indisponible. Appuyez sur Entrée pour rechercher.',
+    'search.all' => 'Afficher tous les résultats',
+    'search.count' => '{count} albums trouvés.',
+
     'download.archive_unavailable' => 'L’archive de l’album est temporairement indisponible. Veuillez réessayer.',
     'profile.password_changed' => 'Mot de passe modifié. Toutes les sessions ont été fermées. Veuillez vous reconnecter.',
     'share.password_unavailable' => 'La vérification du mot de passe est temporairement indisponible. Veuillez réessayer plus tard.',

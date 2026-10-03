@@ -1,5 +1,11 @@
 <?php
 return [
+    'search.loading' => 'Suche läuft …',
+    'search.empty' => 'Keine passenden Alben gefunden.',
+    'search.failed' => 'Suche nicht verfügbar. Mit Enter normal suchen.',
+    'search.all' => 'Alle Ergebnisse anzeigen',
+    'search.count' => '{count} Alben gefunden.',
+
     'download.archive_unavailable' => 'Das Album-Archiv ist vorübergehend nicht verfügbar. Bitte erneut versuchen.',
     'profile.password_changed' => 'Passwort geändert. Alle Sitzungen wurden beendet. Bitte erneut anmelden.',
     'share.password_unavailable' => 'Die Passwortprüfung ist vorübergehend nicht verfügbar. Bitte später erneut versuchen.',

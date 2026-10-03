@@ -466,7 +466,7 @@ function render_header(string $title, bool $admin = false): void {
     if ($admin && is_logged_in()) {
         echo '<button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar" aria-expanded="false" aria-label="'.e(t('open_navigation')).'"><span class="navbar-toggler-icon"></span></button>';
         echo '<div class="collapse navbar-collapse" id="adminNavbar">';
-        echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" value="'.$searchValue.'" placeholder="'.e(t('search_albums')).'" aria-label="'.e(t('search_albums')).'"></div></form>';
+        echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto position-relative" data-live-search="'.e(base_url('admin/search.php')).'" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" autocomplete="off" aria-controls="albumSearchResults" aria-expanded="false" value="'.$searchValue.'" placeholder="'.e(t('search_albums')).'" aria-label="'.e(t('search_albums')).'"></div><div id="albumSearchResults" class="album-search-results shadow" hidden></div><span class="visually-hidden" data-search-status role="status" aria-live="polite"></span></form>';
         echo '<div class="navbar-nav align-items-lg-center gap-lg-2 ms-lg-4">';
         echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>'.e(t('albums')).'</a>';
         echo '<a class="nav-link" href="'.base_url('admin/statistics_overview.php').'"><i class="bi bi-bar-chart-line me-2"></i>'.e(t('stats.title')).'</a>';
@@ -490,6 +490,7 @@ function render_footer(): void {
     echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>';
     echo '<script>window.MusicShareTranslations='.json_encode(js_language_catalogue(),JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES).';window.msT=(key,fallback)=>window.MusicShareTranslations[key]??fallback??key;</script>';
     echo '<script src="'.base_url('assets/js/dialogs.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
+    if (is_admin_request()) echo '<script src="'.base_url('assets/js/live-search.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
     echo '<script src="'.base_url('assets/js/theme.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
     echo '<script src="'.base_url('assets/js/player.js?v=' . rawurlencode(APP_VERSION)).'"></script></body></html>';
 }

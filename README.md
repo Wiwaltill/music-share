@@ -21,7 +21,7 @@ Built for musicians, producers, DJs and audio engineers.
 | --- | --- |
 | 🎧 Listen | Responsive album pages, Plyr audio player, automatic next-track playback and a floating player. |
 | 🎨 Present | Cover artwork, optional colors derived from the cover, album metadata and social sharing previews. |
-| 📀 Organize | Multi-disc albums, drag-and-drop track ordering, automatic MP3 metadata and embedded-cover detection. |
+| 📀 Organize | Live album search with cover previews, multi-disc albums, drag-and-drop track ordering, automatic MP3 metadata and embedded-cover detection. |
 | 🔗 Share | Public links with optional passwords, expiration dates and download permissions. |
 | 📥 Download | Individual tracks or complete albums as ZIP files, with disc folders for multi-disc releases. |
 | 👥 Collaborate | Administrator and user roles, album ownership and internal album sharing. |
