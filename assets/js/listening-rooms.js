@@ -52,9 +52,9 @@ if (picker) {
       handle.addEventListener('pointerdown', event => {
         if (event.button !== 0) return;
         event.preventDefault();
-        handle.setPointerCapture(event.pointerId);
         row.classList.add('room-sorting');
         const move = moving => {
+          if (moving.pointerId !== event.pointerId) return;
           const target = document.elementFromPoint(moving.clientX, moving.clientY)?.closest('.room-selected-item');
           if (target && target !== row && selected.contains(target)) {
             const rect = target.getBoundingClientRect();
@@ -64,19 +64,20 @@ if (picker) {
           if (moving.clientY < bounds.top + 35) selected.scrollTop -= 15;
           if (moving.clientY > bounds.bottom - 35) selected.scrollTop += 15;
         };
-        const finish = () => {
-          handle.removeEventListener('pointermove', move);
-          handle.removeEventListener('pointerup', finish);
-          handle.removeEventListener('pointercancel', finish);
-          handle.removeEventListener('lostpointercapture', finish);
+        const finish = ending => {
+          if (ending.pointerId !== event.pointerId) return;
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', finish);
+          document.removeEventListener('pointercancel', finish);
           order = [...selected.children].map(item => item.dataset.trackId);
           updateSelection();
           [...selected.children].find(item => item.dataset.trackId === box.value)?.querySelector('.room-sort-handle').focus();
         };
-        handle.addEventListener('pointermove', move);
-        handle.addEventListener('pointerup', finish);
-        handle.addEventListener('pointercancel', finish);
-        handle.addEventListener('lostpointercapture', finish);
+        // Keep listeners outside the moved row. Reparenting a captured handle
+        // can release pointer capture and stop the drag before pointerup.
+        document.addEventListener('pointermove', move);
+        document.addEventListener('pointerup', finish);
+        document.addEventListener('pointercancel', finish);
       });
       const text = document.createElement('span');
       const title = document.createElement('strong');
