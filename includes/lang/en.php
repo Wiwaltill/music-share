@@ -1,5 +1,10 @@
 <?php
 return [
+    'rooms.download_all_option' => 'Allow complete room ZIP download',
+    'rooms.download_all' => 'Download room',
+    'rooms.sort_help' => 'Drag the handle or use up/down arrows to reorder. Save afterwards.',
+    'rooms.move' => 'Move',
+
     'rooms.picker_help' => 'Expand albums or search directly. Keep your selection in view on the right.',
     'rooms.search' => 'Search album, artist or track',
     'rooms.selected' => 'Your selection',
@@ -32,7 +37,7 @@ return [
     'rooms.remove_password' => 'Remove password',
     'rooms.downloads' => 'Allow individual track downloads',
     'rooms.selection' => 'Select tracks',
-    'rooms.selection_help' => 'Select individual tracks or complete albums. Playback follows the displayed album and track order.',
+    'rooms.selection_help' => 'Select individual tracks or complete albums. Playback follows the saved room order.',
     'rooms.select_album' => 'Select / deselect entire album',
     'rooms.no_tracks' => 'No available tracks.',
     'rooms.delete_confirm' => 'Permanently delete this room? Its link will become invalid.',

@@ -1,5 +1,10 @@
 <?php
 return [
+    'rooms.download_all_option' => 'Autoriser le téléchargement du salon complet en ZIP',
+    'rooms.download_all' => 'Télécharger le salon',
+    'rooms.sort_help' => 'Déplacez la poignée ou utilisez les flèches haut/bas, puis enregistrez.',
+    'rooms.move' => 'Déplacer',
+
     'rooms.picker_help' => 'Ouvrez les albums ou recherchez directement. Votre sélection reste visible à droite.',
     'rooms.search' => 'Rechercher album, artiste ou piste',
     'rooms.selected' => 'Votre sélection',
@@ -32,7 +37,7 @@ return [
     'rooms.remove_password' => 'Supprimer le mot de passe',
     'rooms.downloads' => 'Autoriser le téléchargement de chaque piste',
     'rooms.selection' => 'Sélectionner les pistes',
-    'rooms.selection_help' => 'Sélectionnez des pistes ou des albums entiers. La lecture suit les albums et les pistes dans l’ordre affiché.',
+    'rooms.selection_help' => 'Sélectionnez des pistes ou des albums entiers. La lecture suit l’ordre enregistré du salon.',
     'rooms.select_album' => 'Sélectionner / désélectionner tout l’album',
     'rooms.no_tracks' => 'Aucune piste disponible.',
     'rooms.delete_confirm' => 'Supprimer définitivement ce salon ? Son lien deviendra invalide.',

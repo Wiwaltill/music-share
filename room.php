@@ -35,6 +35,7 @@ $albumCount=count($artwork);
 <?php endforeach?></div>
 <div class="room-hero-copy"><div class="room-eyebrow"><i class="bi bi-headphones" aria-hidden="true"></i> Listening Room</div><h1><?=e($room['title'])?></h1><?php if($room['description']):?><p class="room-message"><?=nl2br(e($room['description']))?></p><?php endif?><div class="room-meta"><span><?=count($tracks)?> <?=e(t('text.titel'))?></span><span><?=$albumCount?> <?=e(t('albums'))?></span></div>
 <?php if($tracks):?><button type="button" class="btn room-play-all" data-room-play><i class="bi bi-play-fill" aria-hidden="true"></i> <span><?=e(t('rooms.play_all'))?></span></button><?php endif?>
+<?php if($tracks && !empty($room['allow_room_download'])):?><a class="btn btn-outline-secondary rounded-pill ms-2" href="<?=e(base_url('room_download_all.php?token='.rawurlencode($token)))?>"><i class="bi bi-download me-1" aria-hidden="true"></i><?=e(t('rooms.download_all'))?></a><?php endif?>
 </div></header>
 <div class="room-tracklist"><div class="room-list-heading"><h2><?=e(t('rooms.tracklist'))?></h2><span><?=e(t('rooms.listen_hint'))?></span></div>
 <?php $trackIndex=0;?>

@@ -46,19 +46,20 @@ function build_album_archive(string $root, array $tracks, string $target): void 
 }
 
 /** Return an open file handle; replacing a cache entry cannot change an active download. */
-function open_cached_album_archive(string $root, int $albumId, array $tracks) {
+function open_cached_album_archive(string $root, int $albumId, array $tracks, string $scope = 'album') {
+    if (!in_array($scope, ['album','room'], true)) throw new InvalidArgumentException('Invalid archive scope.');
     if ($albumId < 1 || !$tracks) throw new RuntimeException('Album has no tracks.');
-    $directory = $root . '/storage/album-cache';
+    $directory = $root . '/storage/'.$scope.'-cache';
     if (!is_dir($directory) && !mkdir($directory, 0775, true) && !is_dir($directory)) {
         throw new RuntimeException('Album cache directory is not writable.');
     }
-    $lock = fopen($directory . '/album-' . $albumId . '.lock', 'c');
+    $lock = fopen($directory . '/'.$scope.'-' . $albumId . '.lock', 'c');
     if ($lock === false) throw new RuntimeException('Album cache lock unavailable.');
     $temporary = null;
     try {
         if (!flock($lock, LOCK_EX)) throw new RuntimeException('Album cache lock unavailable.');
         $fingerprint = album_archive_fingerprint($root, $tracks);
-        $target = $directory . '/album-' . $albumId . '-' . $fingerprint . '.zip';
+        $target = $directory . '/'.$scope.'-' . $albumId . '-' . $fingerprint . '.zip';
         if (!is_file($target)) {
             $temporary = tempnam($directory, 'building-');
             if ($temporary === false) throw new RuntimeException('Album cache temporary file unavailable.');
@@ -71,7 +72,7 @@ function open_cached_album_archive(string $root, int $albumId, array $tracks) {
         $handle = fopen($target, 'rb');
         if ($handle === false) throw new RuntimeException('Cached album ZIP unavailable.');
         // Keep one version per album. Open handles keep serving their original bytes.
-        foreach (glob($directory . '/album-' . $albumId . '-*.zip') ?: [] as $old) {
+        foreach (glob($directory . '/'.$scope.'-' . $albumId . '-*.zip') ?: [] as $old) {
             if ($old !== $target) @unlink($old);
         }
         return $handle;

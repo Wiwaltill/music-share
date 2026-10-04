@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Increment when adding a migration. The marker belongs to the database, so restores
 // cannot leave a filesystem cache claiming that an older database is up to date.
-const MUSIC_SHARE_SCHEMA_VERSION = 2;
+const MUSIC_SHARE_SCHEMA_VERSION = 3;
 
 function migration_version(PDO $pdo): int {
     try {
@@ -128,6 +128,7 @@ function run_migrations(PDO $pdo): void {
     password_hash VARCHAR(255) NULL,
     expires_at DATETIME NULL,
     allow_download TINYINT(1) NOT NULL DEFAULT 0,
+    allow_room_download TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY idx_room_owner(owner_user_id),
     CONSTRAINT fk_room_owner FOREIGN KEY(owner_user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -140,6 +141,8 @@ function run_migrations(PDO $pdo): void {
     CONSTRAINT fk_room_track_room FOREIGN KEY(room_id) REFERENCES listening_rooms(id) ON DELETE CASCADE,
     CONSTRAINT fk_room_track_audio FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $roomColumns = $pdo->query('SHOW COLUMNS FROM listening_rooms')->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('allow_room_download', $roomColumns, true)) $pdo->exec('ALTER TABLE listening_rooms ADD COLUMN allow_room_download TINYINT(1) NOT NULL DEFAULT 0 AFTER allow_download');
         $stmt = $pdo->prepare("INSERT INTO settings(setting_key,setting_value) VALUES('schema_version',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");
         $stmt->execute([(string)MUSIC_SHARE_SCHEMA_VERSION]);
     } finally {

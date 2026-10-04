@@ -15,8 +15,18 @@ if (picker) {
   const boxes = [...picker.querySelectorAll('input[name="tracks[]"]')];
   const albums = [...picker.querySelectorAll('[data-room-album]')];
   const selected = picker.querySelector('[data-room-selected]');
+  let order = JSON.parse(picker.dataset.order || '[]').map(String);
+  const orderInputs = picker.querySelector('[data-room-order-inputs]');
   function updateSelection() {
-    const chosen = boxes.filter(box => box.checked);
+    order = order.filter(id => boxes.some(box => box.value === id && box.checked));
+    boxes.filter(box => box.checked && !order.includes(box.value)).forEach(box => order.push(box.value));
+    const chosen = order.map(id => boxes.find(box => box.value === id));
+    orderInputs.replaceChildren();
+    order.forEach(id => {
+      const input = document.createElement('input');
+      input.type = 'hidden'; input.name = 'track_order[]'; input.value = id;
+      orderInputs.append(input);
+    });
     picker.querySelector('[data-room-count]').textContent = chosen.length + ' / ' + boxes.length;
     picker.querySelector('[data-room-selection-empty]').hidden = chosen.length > 0;
     picker.querySelector('[data-room-clear]').disabled = !chosen.length;
@@ -24,6 +34,50 @@ if (picker) {
     chosen.forEach(box => {
       const row = document.createElement('div');
       row.className = 'room-selected-item';
+      row.dataset.trackId = box.value;
+      const handle = document.createElement('button');
+      handle.type = 'button'; handle.className = 'room-sort-handle';
+      handle.textContent = '⠿';
+      handle.setAttribute('aria-label', window.msT('rooms.move', 'Move') + ': ' + box.dataset.title);
+      handle.addEventListener('keydown', event => {
+        if (!['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        event.preventDefault();
+        const index = order.indexOf(box.value);
+        const next = index + (event.key === 'ArrowUp' ? -1 : 1);
+        if (next < 0 || next >= order.length) return;
+        [order[index], order[next]] = [order[next], order[index]];
+        updateSelection();
+        selected.children[next].querySelector('.room-sort-handle').focus();
+      });
+      handle.addEventListener('pointerdown', event => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        handle.setPointerCapture(event.pointerId);
+        row.classList.add('room-sorting');
+        const move = moving => {
+          const target = document.elementFromPoint(moving.clientX, moving.clientY)?.closest('.room-selected-item');
+          if (target && target !== row && selected.contains(target)) {
+            const rect = target.getBoundingClientRect();
+            selected.insertBefore(row, moving.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+          }
+          const bounds = selected.getBoundingClientRect();
+          if (moving.clientY < bounds.top + 35) selected.scrollTop -= 15;
+          if (moving.clientY > bounds.bottom - 35) selected.scrollTop += 15;
+        };
+        const finish = () => {
+          handle.removeEventListener('pointermove', move);
+          handle.removeEventListener('pointerup', finish);
+          handle.removeEventListener('pointercancel', finish);
+          handle.removeEventListener('lostpointercapture', finish);
+          order = [...selected.children].map(item => item.dataset.trackId);
+          updateSelection();
+          [...selected.children].find(item => item.dataset.trackId === box.value)?.querySelector('.room-sort-handle').focus();
+        };
+        handle.addEventListener('pointermove', move);
+        handle.addEventListener('pointerup', finish);
+        handle.addEventListener('pointercancel', finish);
+        handle.addEventListener('lostpointercapture', finish);
+      });
       const text = document.createElement('span');
       const title = document.createElement('strong');
       title.textContent = box.dataset.title;
@@ -42,7 +96,7 @@ if (picker) {
         const next = selected.children[Math.min(index, selected.children.length - 1)];
         (next?.querySelector('button') || picker.querySelector('[data-room-filter]')).focus();
       });
-      row.append(text, remove);
+      row.append(handle, text, remove);
       selected.append(row);
     });
     albums.forEach(album => {

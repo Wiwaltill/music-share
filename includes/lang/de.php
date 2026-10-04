@@ -1,5 +1,10 @@
 <?php
 return [
+    'rooms.download_all_option' => 'Kompletten Room als ZIP herunterladen erlauben',
+    'rooms.download_all' => 'Room herunterladen',
+    'rooms.sort_help' => 'Am Griff ziehen oder mit Pfeil hoch/runter sortieren. Danach speichern.',
+    'rooms.move' => 'Verschieben',
+
     'rooms.picker_help' => 'Alben aufklappen oder gezielt suchen. Deine Auswahl bleibt rechts im Blick.',
     'rooms.search' => 'Album, Interpret oder Track suchen',
     'rooms.selected' => 'Deine Auswahl',
@@ -32,7 +37,7 @@ return [
     'rooms.remove_password' => 'Passwort entfernen',
     'rooms.downloads' => 'Einzeltrack-Downloads erlauben',
     'rooms.selection' => 'Tracks auswählen',
-    'rooms.selection_help' => 'Einzelne Tracks oder ganze Alben auswählen. Die Wiedergabe folgt der angezeigten Album- und Track-Reihenfolge.',
+    'rooms.selection_help' => 'Einzelne Tracks oder ganze Alben auswählen. Die Wiedergabe folgt der gespeicherten Room-Reihenfolge.',
     'rooms.select_album' => 'Ganzes Album auswählen / abwählen',
     'rooms.no_tracks' => 'Keine verfügbaren Tracks.',
     'rooms.delete_confirm' => 'Diesen Raum endgültig löschen? Der Link wird ungültig.',

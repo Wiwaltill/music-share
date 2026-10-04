@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS listening_rooms (
     password_hash VARCHAR(255) NULL,
     expires_at DATETIME NULL,
     allow_download TINYINT(1) NOT NULL DEFAULT 0,
+    allow_room_download TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY idx_room_owner(owner_user_id),
     CONSTRAINT fk_room_owner FOREIGN KEY(owner_user_id) REFERENCES users(id) ON DELETE CASCADE

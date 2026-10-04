@@ -1,5 +1,7 @@
 """Check actual share, stream, download and password-change routes in a temp copy."""
 import base64
+import io
+import zipfile
 import http.cookiejar
 import json
 import pathlib
@@ -22,7 +24,7 @@ def client():
     return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
 def request(browser, path, fields=None, json_body=None):
-    data = urllib.parse.urlencode(fields).encode() if fields is not None else None
+    data = urllib.parse.urlencode(fields, doseq=True).encode() if fields is not None else None
     headers = {}
     if json_body is not None:
         data = json.dumps(json_body).encode()
@@ -101,6 +103,22 @@ with tempfile.TemporaryDirectory() as directory:
             assert request(searcher, new_editor, {'csrf': csrf(searcher, new_editor), 'action': 'delete'})[0] == 200
             assert request(client(), public_path)[0] == 404
             edit_room = f'/admin/listening_room_edit.php?id={rooms["room"]}'
+            full_download = '/room_download_all.php?token=room-test'
+            assert request(listener, full_download)[0] == 403
+            assert request(client(), full_download)[0] == 403
+            result = request(searcher, edit_room, {'csrf': csrf(searcher, edit_room), 'title': 'Client Room', 'allow_room_download': '1', 'tracks[]': [ids['track'], rooms['ownTrack']], 'track_order[]': [rooms['ownTrack'], ids['track']]})
+            assert result[0] == 200, result
+            public_body = request(listener, room_page)[1]
+            public_order = re.findall(rb'data-track-id="(\d+)"', public_body)
+            assert public_order == [str(rooms['ownTrack']).encode(), str(ids['track']).encode()], public_order
+            assert request(listener, room_download)[0] == 403  # Independent of the ZIP permission.
+            archive_result = request(listener, full_download)
+            assert archive_result[0] == 200, archive_result
+            with zipfile.ZipFile(io.BytesIO(archive_result[1])) as archive:
+                assert archive.namelist() == ['001 - test.mp3', '002 - test.mp3']
+                assert all(archive.read(name) == b'audio fixture' for name in archive.namelist())
+            assert request(client(), full_download)[0] == 403  # Cached ZIP still requires password.
+            assert request(listener, full_download)[1] == archive_result[1]
             result = request(searcher, edit_room, {'csrf': csrf(searcher, edit_room), 'title': 'Client Room', 'description': 'Personal selection', 'allow_download': '1', 'tracks[]': str(ids['track'])})
             assert result[0] == 200, result
             assert request(listener, room_download)[1] == b'audio fixture'

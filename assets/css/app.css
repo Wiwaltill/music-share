@@ -213,3 +213,8 @@ body > main { flex: 1 0 auto; width: 100%; }
   .room-track-number{display:none;}
   .room-list-track .room-track-cover,.room-list-track .room-track-placeholder{width:42px;height:42px;}
 }
+.room-sort-handle{border:0;background:transparent;color:var(--bs-secondary-color);cursor:grab;touch-action:none;flex-shrink:0;font-size:1.4rem;padding:.25rem;}
+.room-sort-handle:focus-visible{outline:2px solid var(--bs-primary);border-radius:.3rem;}
+.room-selected-item>span{flex:1;}
+.room-selected-item.room-sorting{background:var(--bs-tertiary-bg);outline:2px solid var(--bs-primary);border-radius:.4rem;}
+.room-sorting .room-sort-handle{cursor:grabbing;}

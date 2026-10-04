@@ -18,6 +18,12 @@ run_migrations($pdo);
 $pdo->query('SELECT 1 FROM listening_rooms LIMIT 1');
 $pdo->query('SELECT 1 FROM listening_room_tracks LIMIT 1');
 if (migration_version($pdo) !== MUSIC_SHARE_SCHEMA_VERSION) throw new RuntimeException('Room migration version missing');
+// Existing rooms retain opt-in ZIP downloads when upgrading schema version 2.
+$pdo->exec('ALTER TABLE listening_rooms DROP COLUMN allow_room_download');
+$pdo->exec("UPDATE settings SET setting_value='2' WHERE setting_key='schema_version'");
+run_migrations($pdo);
+$columns = $pdo->query('SHOW COLUMNS FROM listening_rooms')->fetchAll(PDO::FETCH_COLUMN);
+if (!in_array('allow_room_download',$columns,true)) throw new RuntimeException('Room download migration failed');
 // Simulate an older database, including absence of the settings table.
 $pdo->exec('DROP TABLE settings');
 $pdo->exec('ALTER TABLE tracks DROP COLUMN duration_seconds, DROP COLUMN disc_no');
