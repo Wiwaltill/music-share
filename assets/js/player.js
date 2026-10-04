@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   function updateMediaSession(btn){
     if(!('mediaSession'in navigator)||!btn)return;
     const art=btn.dataset.cover?[{src:btn.dataset.cover,sizes:'512x512'}]:[];
-    navigator.mediaSession.metadata=new MediaMetadata({title:btn.dataset.title||'',artist:btn.dataset.artist||'',album:document.title.split(' – ')[0],artwork:art});
+    navigator.mediaSession.metadata=new MediaMetadata({title:btn.dataset.title||'',artist:btn.dataset.artist||'',album:btn.dataset.album||document.title.split(' – ')[0],artwork:art});
     updatePositionState();
   }
   function start(index){
@@ -43,6 +43,12 @@ document.addEventListener('DOMContentLoaded',()=>{
     lastPositionUpdate=-1;
     audio.src=btn.dataset.src;
     label.textContent=btn.dataset.title||msT('text.wiedergabe', 'Wiedergabe');
+    const cover=box.querySelector('[data-player-cover]');
+    if(cover){cover.hidden=!btn.dataset.cover;if(btn.dataset.cover)cover.src=btn.dataset.cover;else cover.removeAttribute('src');}
+    for(const field of ['artist','album']){
+      const element=box.querySelector('[data-player-'+field+']');
+      if(element){element.textContent=btn.dataset[field]||'';element.hidden=!btn.dataset[field];}
+    }
     box.hidden=false;
     requestAnimationFrame(()=>box.classList.add('show'));
     updateTrackButtons();
