@@ -1,11 +1,11 @@
 <?php
 return [
     'rooms.copied' => 'Link kopiert',
-    'addons.title' => 'Add-ons',
+    'modules.title' => 'Module',
     'rooms.disabled' => 'Listening Rooms sind nicht aktiviert.',
     'rooms.unavailable' => 'Dieser Raum ist nicht verfügbar oder abgelaufen.',
     'rooms.saved' => 'Änderungen gespeichert.',
-    'rooms.addon_help' => 'Persönliche Track-Auswahl aus mehreren Alben über einen eigenen Link teilen. Basic Album-Shares bleiben unverändert. Beim Deaktivieren sind bestehende Raum-Links nicht erreichbar.',
+    'rooms.module_help' => 'Persönliche Track-Auswahl aus mehreren Alben über einen eigenen Link teilen. Basic Album-Shares bleiben unverändert. Beim Deaktivieren sind bestehende Raum-Links nicht erreichbar.',
     'rooms.enable' => 'Listening Rooms aktivieren',
     'rooms.save' => 'Speichern',
     'rooms.intro' => 'Eigene Zusammenstellungen für Kunden, Labels oder Freunde.',

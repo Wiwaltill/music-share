@@ -1,11 +1,11 @@
 <?php
 return [
     'rooms.copied' => 'Lien copié',
-    'addons.title' => 'Extensions',
+    'modules.title' => 'Modules',
     'rooms.disabled' => 'Listening Rooms ne sont pas activés.',
     'rooms.unavailable' => 'Ce salon est indisponible ou expiré.',
     'rooms.saved' => 'Modifications enregistrées.',
-    'rooms.addon_help' => 'Partagez une sélection personnelle de pistes de plusieurs albums via un lien dédié. Les partages classiques restent inchangés. La désactivation rend les liens des salons indisponibles.',
+    'rooms.module_help' => 'Partagez une sélection personnelle de pistes de plusieurs albums via un lien dédié. Les partages classiques restent inchangés. La désactivation rend les liens des salons indisponibles.',
     'rooms.enable' => 'Activer Listening Rooms',
     'rooms.save' => 'Enregistrer',
     'rooms.intro' => 'Sélections personnelles pour clients, labels ou amis.',

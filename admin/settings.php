@@ -6,6 +6,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = (string)($_POST['action'] ?? '');
 
+    if ($action === 'modules') {
+        set_setting('listening_rooms_enabled', isset($_POST['listening_rooms_enabled']) ? '1' : '0');
+        flash('success', t('rooms.saved'));
+        redirect('admin/settings.php#modules');
+    }
+
     if ($action === 'site') {
         $siteName = trim((string)($_POST['site_name'] ?? ''));
         if ($siteName === '') $siteName = 'Album Share';
@@ -147,6 +153,21 @@ render_header(t('page.settings.title'), true);
     </div></div>
   </section>
   
+  <section id="modules">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-body py-3"><h2 class="h5 mb-0"><i class="bi bi-puzzle me-2"></i><?=e(t('modules.title'))?></h2></div>
+      <div class="card-body p-4">
+        <h3 class="h6">Listening Rooms</h3>
+        <p class="text-body-secondary"><?=e(t('rooms.module_help'))?></p>
+        <form method="post">
+          <input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="modules">
+          <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" role="switch" name="listening_rooms_enabled" id="roomsEnabled" <?=get_setting('listening_rooms_enabled','0')==='1'?'checked':''?>><label class="form-check-label" for="roomsEnabled"><?=e(t('rooms.enable'))?></label></div>
+          <button class="btn btn-primary"><?=e(t('text.speichern'))?></button>
+        </form>
+      </div>
+    </div>
+  </section>
+
   <section id="mail">
     <div class="card shadow-sm border-0"><div class="card-header bg-body py-3"><h2 class="h5 mb-0"><i class="bi bi-envelope-gear me-2"></i><?=e(t('mail.settings'))?></h2></div><div class="card-body p-4">
       <p class="text-body-secondary"><?=e(t('mail.settings_help'))?></p>
