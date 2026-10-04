@@ -78,6 +78,52 @@ with tempfile.TemporaryDirectory() as directory:
             literal_results = json.loads(request(searcher, '/admin/search.php?q=%25_')[1])['albums']
             assert [item['title'] for item in literal_results] == ['100%_Mix'], literal_results
             assert json.loads(request(searcher, '/admin/search.php?q=')[1])['albums'] == []
+            # Optional room add-on is isolated from basic album-share routes.
+            assert request(visitor, '/room.php?token=room-test')[0] == 404
+            rooms = json.loads(fixture('room-seed', ids['track']))
+            room_page = '/room.php?token=room-test'
+            room_stream = f'/room_stream.php?token=room-test&track={ids["track"]}'
+            room_download = f'/room_download.php?token=room-test&track={ids["track"]}'
+            listener = client()
+            assert request(listener, room_stream)[0] == 403
+            assert request(listener, room_page, {'csrf': csrf(listener, room_page), 'password': 'room-password'})[0] == 200
+            assert request(listener, room_stream)[1] == b'audio fixture'
+            assert request(listener, '/room_stream.php?token=room-test&track=999999')[0] == 404
+            assert request(listener, room_download)[0] == 403
+            # Exercise creation and deletion through the actual editor.
+            create_path = '/admin/listening_room_edit.php'
+            created = request(searcher, create_path, {'csrf': csrf(searcher, create_path), 'title': 'Created room', 'tracks[]': str(ids['track'])})
+            assert 'listening_room_edit.php?id=' in created[2], created
+            new_link = re.search(rb'id="roomLink"[^>]*value="([^"]+)"', created[1]).group(1).decode()
+            public_path = urllib.parse.urlsplit(new_link).path + '?' + urllib.parse.urlsplit(new_link).query
+            assert request(client(), public_path)[0] == 200
+            new_editor = urllib.parse.urlsplit(created[2]).path + '?' + urllib.parse.urlsplit(created[2]).query
+            assert request(searcher, new_editor, {'csrf': csrf(searcher, new_editor), 'action': 'delete'})[0] == 200
+            assert request(client(), public_path)[0] == 404
+            edit_room = f'/admin/listening_room_edit.php?id={rooms["room"]}'
+            result = request(searcher, edit_room, {'csrf': csrf(searcher, edit_room), 'title': 'Client Room', 'description': 'Personal selection', 'allow_download': '1', 'tracks[]': str(ids['track'])})
+            assert result[0] == 200, result
+            assert request(listener, room_download)[1] == b'audio fixture'
+            # Injecting a nonexistent/unauthorized track cannot overwrite the room.
+            result = request(searcher, edit_room, {'csrf': csrf(searcher, edit_room), 'title': 'Bad selection', 'tracks[]': '999999'})
+            assert b'The selection contains unavailable tracks.' in result[1], result
+            assert request(listener, room_stream)[0] == 200
+            fixture('room-revoke-album', ids['album'])
+            assert request(listener, room_stream)[0] == 404
+            fixture('room-restore-album', ids['album'])
+            assert request(listener, room_stream)[0] == 200
+            fixture('room-disable')
+            assert request(listener, room_stream)[0] == 404
+            assert request(listener, room_page)[0] == 404
+            fixture('room-enable')
+            assert request(listener, room_stream)[0] == 200
+            fixture('trash', ids['album'])
+            assert request(listener, room_stream)[0] == 404
+            fixture('restore', ids['album'])
+            assert request(listener, room_stream)[0] == 200
+            fixture('room-expire')
+            assert request(listener, room_stream)[0] == 403
+            assert request(listener, room_page)[0] == 404
             stream = f'/stream.php?token=security-share&track={ids["track"]}'
             track_download = f'/download_track.php?token=security-share&track={ids["track"]}'
             album_download = '/download_album.php?token=security-share'

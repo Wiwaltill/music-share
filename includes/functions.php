@@ -476,6 +476,8 @@ function render_header(string $title, bool $admin = false): void {
         echo '<form class="admin-header-search my-3 my-lg-0 me-lg-auto position-relative" data-live-search="'.e(base_url('admin/search.php')).'" method="get" action="'.base_url('admin/index.php').'" role="search"><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input class="form-control" type="search" name="q" autocomplete="off" aria-controls="albumSearchResults" aria-expanded="false" value="'.$searchValue.'" placeholder="'.e(t('search_albums')).'" aria-label="'.e(t('search_albums')).'"></div><div id="albumSearchResults" class="album-search-results shadow" hidden></div><span class="visually-hidden" data-search-status role="status" aria-live="polite"></span></form>';
         echo '<div class="navbar-nav align-items-lg-center gap-lg-2 ms-lg-4">';
         echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>'.e(t('albums')).'</a>';
+        if (get_setting('listening_rooms_enabled','0') === '1') echo '<a class="nav-link" href="'.base_url('admin/listening_rooms.php').'"><i class="bi bi-headphones me-2"></i>Listening Rooms</a>';
+        if (is_admin()) echo '<a class="nav-link" href="'.base_url('admin/addons.php').'"><i class="bi bi-puzzle me-2"></i>'.e(t('addons.title')).'</a>';
         echo '<a class="nav-link" href="'.base_url('admin/statistics_overview.php').'"><i class="bi bi-bar-chart-line me-2"></i>'.e(t('stats.title')).'</a>';
         echo '<a class="nav-link" href="'.base_url('admin/profile.php').'"><i class="bi bi-person-circle me-2"></i>'.e(t('profile.title')).'</a>';
         if (is_admin()) { global $pdo; $trashCount=(int)$pdo->query("SELECT COUNT(*) FROM albums WHERE deleted_at IS NOT NULL")->fetchColumn(); if($trashCount>0){ echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>'.e(t('trash')).' <span class="badge text-bg-secondary ms-1">'.$trashCount.'</span></a>'; } echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>'.e(t('settings')).'</a>'; }
@@ -1121,9 +1123,9 @@ function revoke_user_sessions(int $userId): void {
 }
 
 /** Serialize attempts per share and client IP, independent of cookies/sessions. */
-function verify_share_password(array $share, string $password): string {
+function verify_share_password(array $share, string $password, string $scope = 'share'): string {
     global $pdo;
-    $key = hash('sha256', 'share|' . (int)$share['id'] . '|' . (string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    $key = hash('sha256', $scope . '|' . (int)$share['id'] . '|' . (string)($_SERVER['REMOTE_ADDR'] ?? ''));
     $lock = 'share-password-' . substr($key, 0, 48);
     $stmt = $pdo->prepare('SELECT GET_LOCK(?, 5)');
     $stmt->execute([$lock]);
@@ -1134,7 +1136,7 @@ function verify_share_password(array $share, string $password): string {
         if ((int)$stmt->fetchColumn() >= 5) return 'limited';
         if (password_verify($password, (string)$share['password_hash'])) {
             $pdo->prepare('DELETE FROM login_attempts WHERE login_key=?')->execute([$key]);
-            $_SESSION['share_ok_' . $share['id']] = (string)$share['password_hash'];
+            $_SESSION[$scope . '_ok_' . $share['id']] = (string)$share['password_hash'];
             return 'granted';
         }
         $pdo->prepare('INSERT INTO login_attempts(login_key,attempted_at,successful) VALUES(?,NOW(),0)')->execute([$key]);

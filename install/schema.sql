@@ -11,3 +11,25 @@ CREATE TABLE IF NOT EXISTS statistics_daily (event_date DATE NOT NULL, album_id 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,user_id INT UNSIGNED NOT NULL,token_hash CHAR(64) NOT NULL UNIQUE,expires_at DATETIME NOT NULL,used_at DATETIME NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,KEY idx_password_reset_user(user_id),KEY idx_password_reset_expiry(expires_at),CONSTRAINT fk_password_reset_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS login_attempts (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,login_key CHAR(64) NOT NULL,attempted_at DATETIME NOT NULL,successful TINYINT(1) NOT NULL DEFAULT 0,KEY idx_login_attempts_key_time(login_key,attempted_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE IF NOT EXISTS user_sessions (session_token CHAR(64) PRIMARY KEY,user_id INT UNSIGNED NOT NULL,created_at DATETIME NOT NULL,last_seen_at DATETIME NOT NULL,expires_at DATETIME NOT NULL,revoked_at DATETIME NULL,ip_hint VARCHAR(64) NOT NULL DEFAULT '',user_agent_hint VARCHAR(255) NOT NULL DEFAULT '',KEY idx_user_sessions_user(user_id,last_seen_at),CONSTRAINT fk_user_sessions_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS listening_rooms (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    owner_user_id INT UNSIGNED NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    token CHAR(48) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NULL,
+    expires_at DATETIME NULL,
+    allow_download TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_room_owner(owner_user_id),
+    CONSTRAINT fk_room_owner FOREIGN KEY(owner_user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS listening_room_tracks (
+    room_id INT UNSIGNED NOT NULL,
+    track_id INT UNSIGNED NOT NULL,
+    position INT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY(room_id,track_id),
+    CONSTRAINT fk_room_track_room FOREIGN KEY(room_id) REFERENCES listening_rooms(id) ON DELETE CASCADE,
+    CONSTRAINT fk_room_track_audio FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

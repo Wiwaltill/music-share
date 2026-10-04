@@ -10,6 +10,14 @@ $schema = file_get_contents(__DIR__ . '/../install/schema.sql');
 $pdo->exec($schema);
 run_migrations($pdo);
 if (migration_version($pdo) !== MUSIC_SHARE_SCHEMA_VERSION) throw new RuntimeException('Missing version marker');
+// Upgrading version 1 creates add-on tables without enabling the add-on.
+$pdo->exec('DROP TABLE listening_room_tracks');
+$pdo->exec('DROP TABLE listening_rooms');
+$pdo->exec("UPDATE settings SET setting_value='1' WHERE setting_key='schema_version'");
+run_migrations($pdo);
+$pdo->query('SELECT 1 FROM listening_rooms LIMIT 1');
+$pdo->query('SELECT 1 FROM listening_room_tracks LIMIT 1');
+if (migration_version($pdo) !== MUSIC_SHARE_SCHEMA_VERSION) throw new RuntimeException('Room migration version missing');
 // Simulate an older database, including absence of the settings table.
 $pdo->exec('DROP TABLE settings');
 $pdo->exec('ALTER TABLE tracks DROP COLUMN duration_seconds, DROP COLUMN disc_no');

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Increment when adding a migration. The marker belongs to the database, so restores
 // cannot leave a filesystem cache claiming that an older database is up to date.
-const MUSIC_SHARE_SCHEMA_VERSION = 1;
+const MUSIC_SHARE_SCHEMA_VERSION = 2;
 
 function migration_version(PDO $pdo): int {
     try {
@@ -119,6 +119,27 @@ function run_migrations(PDO $pdo): void {
             KEY idx_user_sessions_user(user_id,last_seen_at),
             CONSTRAINT fk_user_sessions_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS listening_rooms (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    owner_user_id INT UNSIGNED NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    token CHAR(48) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NULL,
+    expires_at DATETIME NULL,
+    allow_download TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_room_owner(owner_user_id),
+    CONSTRAINT fk_room_owner FOREIGN KEY(owner_user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        $pdo->exec("CREATE TABLE IF NOT EXISTS listening_room_tracks (
+    room_id INT UNSIGNED NOT NULL,
+    track_id INT UNSIGNED NOT NULL,
+    position INT UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY(room_id,track_id),
+    CONSTRAINT fk_room_track_room FOREIGN KEY(room_id) REFERENCES listening_rooms(id) ON DELETE CASCADE,
+    CONSTRAINT fk_room_track_audio FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         $stmt = $pdo->prepare("INSERT INTO settings(setting_key,setting_value) VALUES('schema_version',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");
         $stmt->execute([(string)MUSIC_SHARE_SCHEMA_VERSION]);
     } finally {

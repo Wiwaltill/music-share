@@ -75,6 +75,12 @@ post_max_size = 512M
 
 `post_max_size` must cover the entire request, including form data and all files sent together. Large uploads and backups also need sufficient execution time, temporary disk space and free storage.
 
+## Optional add-ons
+
+The basic album-share workflow stays unchanged. Administrators can enable **Listening Rooms** in **Add-ons**; the extension is disabled by default. When enabled, users can create a separate room with a title, message and track selection across albums they can access. Each room has its own link, optional password and expiration, and optional individual-track downloads. Select an entire album or individual tracks; playback follows the displayed album and track order.
+
+Rooms are managed separately from album shares. A room cannot expose tracks its owner no longer has access to, including trashed albums or revoked internal sharing. Passwords use the same attempt limits as album shares. Disabling the add-on makes room links unavailable without deleting saved rooms. Database backups include room settings and selections. Room playback does not currently contribute to album-share statistics, and room-wide ZIP downloads are not included.
+
 ## First album
 
 1. Create an album or use the direct album upload in the dashboard.

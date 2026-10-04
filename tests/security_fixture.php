@@ -36,3 +36,27 @@ if ($action === 'seed') {
 } elseif ($action === 'rotate-share-password') {
     $pdo->prepare("UPDATE shares SET password_hash=? WHERE token='security-share'")->execute([password_hash('changed-share-password', PASSWORD_DEFAULT)]);
 }
+
+if ($action === 'room-seed') {
+    $owner=(int)$pdo->query("SELECT id FROM users WHERE username='search_user'")->fetchColumn();
+    $album=(int)$pdo->query("SELECT id FROM albums WHERE title='100%_Mix'")->fetchColumn();
+    $pdo->prepare('INSERT INTO tracks(album_id,title,audio_file,original_name,disc_no,track_no,duration_seconds) VALUES(?,?,?,?,1,1,30)')->execute([$album,'Room own track','test.mp3','test.mp3']);
+    $ownTrack=(int)$pdo->lastInsertId();
+    $pdo->prepare('INSERT INTO listening_rooms(owner_user_id,title,token,password_hash) VALUES(?,?,?,?)')->execute([$owner,'Client Room','room-test',password_hash('room-password',PASSWORD_DEFAULT)]);
+    $room=(int)$pdo->lastInsertId();
+    $insert=$pdo->prepare('INSERT INTO listening_room_tracks(room_id,track_id,position) VALUES(?,?,?)');
+    $insert->execute([$room,$id,0]);$insert->execute([$room,$ownTrack,1]);
+    set_setting('listening_rooms_enabled','1');
+    echo json_encode(compact('room','ownTrack'));
+} elseif ($action === 'room-disable') {
+    set_setting('listening_rooms_enabled','0');
+} elseif ($action === 'room-enable') {
+    set_setting('listening_rooms_enabled','1');
+} elseif ($action === 'room-revoke-album') {
+    $pdo->prepare("DELETE c FROM album_collaborators c JOIN users u ON u.id=c.user_id WHERE c.album_id=? AND u.username='search_user'")->execute([$id]);
+} elseif ($action === 'room-restore-album') {
+    $owner=(int)$pdo->query("SELECT id FROM users WHERE username='search_user'")->fetchColumn();
+    $pdo->prepare('INSERT INTO album_collaborators(album_id,user_id) VALUES(?,?)')->execute([$id,$owner]);
+} elseif ($action === 'room-expire') {
+    $pdo->exec("UPDATE listening_rooms SET expires_at=DATE_SUB(NOW(),INTERVAL 1 SECOND) WHERE token='room-test'");
+}
