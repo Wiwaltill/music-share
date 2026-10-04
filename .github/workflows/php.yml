@@ -40,3 +40,5 @@ jobs:
         run: php tests/album_archive_test.php
       - name: Share and session security regression tests
         run: python3 tests/security_http_test.py
+      - name: Shared error response regression tests
+        run: python3 tests/errors_http_test.py

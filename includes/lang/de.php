@@ -1,5 +1,22 @@
 <?php
 return [
+    'error.title.401' => 'Bitte anmelden',
+    'error.help.401' => 'Melde dich an, um diese Funktion zu verwenden.',
+    'error.title.403' => 'Zugriff nicht möglich',
+    'error.help.403' => 'Der Zugriff ist nicht freigegeben. Öffne zuerst den gültigen Share-Link und gib gegebenenfalls das Passwort ein. Downloads müssen vom Absender erlaubt werden.',
+    'error.title.404' => 'Dieser Inhalt ist nicht verfügbar',
+    'error.help.404' => 'Der Link ist möglicherweise abgelaufen oder der Inhalt wurde entfernt. Bitte prüfe die Adresse oder frage den Absender nach einem neuen Link.',
+    'error.title.413' => 'Die Datei ist zu groß',
+    'error.help.413' => 'Bitte wähle eine kleinere Datei. Bei größeren Uploads kann der Administrator die Upload-Limits des Servers prüfen.',
+    'error.title.419' => 'Das Formular ist nicht mehr gültig',
+    'error.help.419' => 'Bitte lade die Seite neu und sende das Formular erneut. Noch nicht gespeicherte Eingaben musst du gegebenenfalls wiederholen.',
+    'error.title.429' => 'Bitte kurz warten',
+    'error.help.429' => 'Es gab zu viele Versuche. Bitte versuche es später erneut.',
+    'error.title.500' => 'Das hat leider nicht geklappt',
+    'error.help.500' => 'Bitte versuche es später erneut. Falls das Problem bleibt, informiere den Betreiber dieser Plattform.',
+    'error.title.503' => 'Vorübergehend nicht verfügbar',
+    'error.help.503' => 'Bitte versuche es später erneut. Der Betreiber kann die Serverprotokolle prüfen.',
+
     'rooms.error_help' => 'Der Link ist möglicherweise abgelaufen oder der Raum wurde entfernt. Bitte prüfe die Adresse oder frage den Absender nach einem neuen Link.',
     'rooms.disabled_help' => 'Listening Rooms sind derzeit deaktiviert. Bitte wende dich an den Absender oder versuche es später erneut.',
     'rooms.back_to_rooms' => 'Zu meinen Rooms',

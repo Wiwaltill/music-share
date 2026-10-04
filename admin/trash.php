@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__.'/../includes/bootstrap.php';
 require_login();
-if (!is_admin()) { http_response_code(403); exit('Nicht erlaubt.'); }
+if (!is_admin()) { app_error(403); }
 function purge_album_files(PDO $pdo, int $id): void {
     $s=$pdo->prepare('SELECT cover_file FROM albums WHERE id=?');$s->execute([$id]);$cover=(string)$s->fetchColumn();
     $s=$pdo->prepare('SELECT audio_file FROM tracks WHERE album_id=?');$s->execute([$id]);

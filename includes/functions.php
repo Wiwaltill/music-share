@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/errors.php';
 
 function e(?string $value): string { return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8'); }
 function base_url(string $path = ''): string {
@@ -23,7 +24,7 @@ function asset_url(string $path): string {
 }
 function redirect(string $path): never { header('Location: ' . base_url($path)); exit; }
 function is_logged_in(): bool { return !empty($_SESSION['user_id']); }
-function require_login(): void { if (!is_logged_in()) redirect('admin/login.php'); }
+function require_login(): void { if (!is_logged_in()) { if(error_response_kind()==='json')app_error(401); redirect('admin/login.php'); } }
 function current_user(): ?array {
     global $pdo;
     if (!is_logged_in()) return null;
@@ -37,7 +38,7 @@ function current_user(): ?array {
     return $user ?: null;
 }
 function is_admin(): bool { return (current_user()['role'] ?? '') === 'admin'; }
-function require_admin(): void { require_login(); if (!is_admin()) { http_response_code(403); exit('Keine Berechtigung.'); } }
+function require_admin(): void { require_login(); if (!is_admin()) { app_error(403); } }
 function can_access_album(int $albumId): bool {
     global $pdo;
     if ($albumId < 1 || !is_logged_in()) return false;
@@ -57,11 +58,11 @@ function can_manage_album_access(int $albumId): bool {
 }
 function require_album_access(int $albumId): void {
     require_login();
-    if (!can_access_album($albumId)) { http_response_code(403); exit('Keine Berechtigung für dieses Album.'); }
+    if (!can_access_album($albumId)) { app_error(403); }
 }
 function require_album_owner_or_admin(int $albumId): void {
     require_login();
-    if (!can_manage_album_access($albumId)) { http_response_code(403); exit('Nur der Ersteller oder ein Administrator darf diese Aktion ausführen.'); }
+    if (!can_manage_album_access($albumId)) { app_error(403); }
 }
 
 function get_setting(string $key, ?string $default = null): ?string {
@@ -399,15 +400,12 @@ function verify_csrf(): void {
     $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
     $postMax = ini_bytes((string)ini_get('post_max_size'));
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && $contentLength > 0 && empty($_POST) && empty($_FILES)) {
-        http_response_code(413);
-        $limit = $postMax > 0 ? ' Das PHP-Limit post_max_size liegt aktuell bei ' . format_bytes($postMax) . '.' : '';
-        exit('Der Upload ist größer als vom Server erlaubt.' . $limit . ' Bitte post_max_size und upload_max_filesize erhöhen.');
+        app_error(413);
     }
     $sessionToken = (string)($_SESSION['csrf'] ?? '');
     $postedToken = (string)($_POST['csrf'] ?? '');
     if ($sessionToken === '' || $postedToken === '' || !hash_equals($sessionToken, $postedToken)) {
-        http_response_code(419);
-        exit('Die Sitzung ist abgelaufen oder das Formular ist nicht mehr gültig. Bitte die Seite neu laden und den Upload erneut starten.');
+        app_error(419);
     }
 }
 function flash(string $type, string $message): void { $_SESSION['flash'][] = compact('type','message'); }

@@ -3,9 +3,9 @@ require_once __DIR__.'/includes/bootstrap.php';
 require_once __DIR__.'/includes/listening_rooms.php';
 require_listening_rooms();
 $room=public_room((string)($_GET['token'] ?? ''));
-if (!$room || !room_access_granted($room) || empty($room['allow_room_download'])) { http_response_code(403); exit; }
+if (!$room || !room_access_granted($room) || empty($room['allow_room_download'])) { app_error(403); }
 $tracks=room_tracks($room);
-if (!$tracks) { http_response_code(404); exit; }
+if (!$tracks) { app_error(404); }
 session_write_close();
 require_once __DIR__.'/includes/album_archive.php';
 // Number the selected songs in listening order; source albums and files remain unchanged.
@@ -18,7 +18,7 @@ foreach($tracks as $index=>&$track) {
 unset($track);
 try { $archive=open_cached_album_archive(__DIR__,(int)$room['id'],$tracks,'room'); }
 catch(Throwable $e) {
-    error_log('Room ZIP failed: '.$e->getMessage()); http_response_code(503); header('Retry-After: 5'); exit(t('download.archive_unavailable'));
+    error_log('Room ZIP failed: '.$e->getMessage()); http_response_code(503); header('Retry-After: 5'); app_error(503,'download.archive_unavailable');
 }
 header('Content-Type: application/zip');
 header('Content-Disposition: attachment; filename="'.slugify($room['title']).'.zip"');

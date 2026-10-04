@@ -1,5 +1,22 @@
 <?php
 return [
+    'error.title.401' => 'Please sign in',
+    'error.help.401' => 'Sign in to use this feature.',
+    'error.title.403' => 'Access unavailable',
+    'error.help.403' => 'Access has not been granted. Open the valid share link first and enter its password if required. Downloads must be enabled by the sender.',
+    'error.title.404' => 'This content is unavailable',
+    'error.help.404' => 'The link may have expired or the content may have been removed. Check the address or ask the sender for a new link.',
+    'error.title.413' => 'The file is too large',
+    'error.help.413' => 'Choose a smaller file. For larger uploads, the administrator can check the server upload limits.',
+    'error.title.419' => 'This form is no longer valid',
+    'error.help.419' => 'Reload the page and submit the form again. You may need to re-enter unsaved changes.',
+    'error.title.429' => 'Please wait',
+    'error.help.429' => 'There have been too many attempts. Please try again later.',
+    'error.title.500' => 'Something went wrong',
+    'error.help.500' => 'Please try again later. If the problem persists, contact the platform operator.',
+    'error.title.503' => 'Temporarily unavailable',
+    'error.help.503' => 'Please try again later. The platform operator can check the server logs.',
+
     'rooms.error_help' => 'The link may have expired or the room may have been removed. Check the address or ask the sender for a new link.',
     'rooms.disabled_help' => 'Listening Rooms are currently disabled. Contact the sender or try again later.',
     'rooms.back_to_rooms' => 'Back to my rooms',

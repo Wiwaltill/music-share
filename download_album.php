@@ -11,14 +11,14 @@ if($albumId>0){
     $s=$pdo->prepare('SELECT s.*,a.title FROM shares s JOIN albums a ON a.id=s.album_id WHERE a.deleted_at IS NULL AND s.token=? AND s.allow_download=1 AND (s.expires_at IS NULL OR s.expires_at>NOW())');
     $s->execute([$token]);
     $share=$s->fetch();
-    if(!$share || !share_access_granted($share)){http_response_code(403);exit;}
+    if(!$share || !share_access_granted($share)){app_error(403);}
 }
-if(!$share){http_response_code(404);exit;}
+if(!$share){app_error(404);}
 $s=$pdo->prepare('SELECT * FROM tracks WHERE album_id=? ORDER BY disc_no,track_no,id');
 $s->execute([$share['album_id']]);
 $tracks=$s->fetchAll();
 session_write_close();
-if (!$tracks) { http_response_code(404); exit; }
+if (!$tracks) { app_error(404); }
 require_once __DIR__.'/includes/album_archive.php';
 try {
     $archive = open_cached_album_archive(__DIR__, (int)$share['album_id'], $tracks);
@@ -26,7 +26,7 @@ try {
     error_log('Music Share album archive failed: '.$e->getMessage());
     http_response_code(503);
     header('Retry-After: 5');
-    exit(t('download.archive_unavailable'));
+    app_error(503,'download.archive_unavailable');
 }
 record_statistic('album_download',(int)$share['album_id'],(int)($share['id']??0));
 $name=slugify($share['title']).'.zip';

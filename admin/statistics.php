@@ -2,7 +2,7 @@
 require_once __DIR__.'/../includes/bootstrap.php'; require_login();
 $id=(int)($_GET['id']??0); require_album_access($id);
 $s=$pdo->prepare('SELECT title,artist FROM albums WHERE id=?');$s->execute([$id]);$album=$s->fetch();
-if(!$album){http_response_code(404);exit(t('text.album.nicht.gefunden'));}
+if(!$album){app_error(404);}
 $period=(int)($_GET['days']??30); if(!in_array($period,[1,7,30,0],true))$period=30;
 try{$totals=statistics_album_totals($id,$period);}
 catch(Throwable $e){$totals=['album_view'=>0,'track_play'=>0,'track_download'=>0,'album_download'=>0];}

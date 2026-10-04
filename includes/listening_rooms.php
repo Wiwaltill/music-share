@@ -2,16 +2,7 @@
 declare(strict_types=1);
 
 function room_error_page(int $status, string $message, string $help = 'rooms.error_help'): never {
-    http_response_code($status);
-    render_header(t($message), false, 'listening-room-page');
-    echo '<section class="room-error-page" aria-labelledby="roomErrorTitle"><div class="room-error-card">';
-    echo '<div class="room-eyebrow"><i class="bi bi-headphones" aria-hidden="true"></i> Listening Room</div>';
-    echo '<div class="room-error-icon" aria-hidden="true"><i class="bi bi-link-45deg"></i></div>';
-    echo '<h1 id="roomErrorTitle">'.e(t($message)).'</h1><p>'.e(t($help)).'</p>';
-    if (is_logged_in() && get_setting('listening_rooms_enabled','0') === '1') echo '<a class="btn btn-outline-secondary rounded-pill" href="'.e(base_url('admin/listening_rooms.php')).'">'.e(t('rooms.back_to_rooms')).'</a>';
-    echo '<div class="room-credit">Music Share</div></div></section>';
-    render_footer();
-    exit;
+    app_error($status,$message,$help,'Listening Room');
 }
 
 function require_listening_rooms(): void {
@@ -19,8 +10,7 @@ function require_listening_rooms(): void {
         if (is_admin_request() || basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'room.php') {
             room_error_page(404, 'rooms.disabled', 'rooms.disabled_help');
         }
-        http_response_code(404);
-        exit(t('rooms.disabled'));
+        app_error(404,'rooms.disabled','rooms.disabled_help','Listening Room');
     }
 }
 function room_for_management(int $id): array {
@@ -53,10 +43,10 @@ function room_tracks(array $room): array {
 function room_media_track(string $token, int $trackId, bool $download = false): array {
     $room = public_room($token);
     if (!$room || !room_access_granted($room) || ($download && !$room['allow_download'])) {
-        http_response_code(403); exit;
+        app_error(403);
     }
     foreach (room_tracks($room) as $track) {
         if ((int)$track['id'] === $trackId) return $track;
     }
-    http_response_code(404); exit;
+    app_error(404);
 }

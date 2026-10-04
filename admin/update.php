@@ -10,8 +10,7 @@ if (isset($_GET['download_migration'])) {
     $backupName = basename((string)$_GET['download_migration']);
     $backupPath = migration_backup_directory($root) . '/' . $backupName;
     if ($backupName === '' || !is_file($backupPath) || !in_array($backupPath, migration_backups($root), true)) {
-        http_response_code(404);
-        exit('Migrationsbackup wurde nicht gefunden.');
+        app_error(404);
     }
     header('Content-Type: application/zip');
     header('Content-Disposition: attachment; filename="' . addcslashes($backupName, '\"') . '"');

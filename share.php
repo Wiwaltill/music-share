@@ -8,7 +8,7 @@ if($isPreview){
     $s=$pdo->prepare('SELECT id album_id,title,artist,album_artist,release_year,genre,label_name,copyright_text,description,cover_file FROM albums WHERE id=?');
     $s->execute([$previewAlbumId]);
     $album=$s->fetch();
-    if(!$album){http_response_code(404);exit(t('text.album.nicht.gefunden'));}
+    if(!$album){app_error(404);}
     $share=[
         'id'=>0,
         'album_id'=>(int)$album['album_id'],
@@ -25,7 +25,7 @@ if($isPreview){
     $s=$pdo->prepare('SELECT s.*,a.title,a.artist,a.album_artist,a.release_year,a.genre,a.label_name,a.copyright_text,a.description,a.cover_file FROM shares s JOIN albums a ON a.id=s.album_id WHERE a.deleted_at IS NULL AND s.token=?');
     $s->execute([$token]);
     $share=$s->fetch();
-    if(!$share||($share['expires_at']&&strtotime($share['expires_at'])<=time())){http_response_code(404);exit(t('share.invalid_or_expired'));}
+    if(!$share||($share['expires_at']&&strtotime($share['expires_at'])<=time())){app_error(404);}
 }
 $socialTitle = trim((string)$share['title']) . ' – ' . trim((string)$share['artist']);
 $socialDescription = trim((string)($share['description'] ?? ''));

@@ -1,5 +1,22 @@
 <?php
 return [
+    'error.title.401' => 'Veuillez vous connecter',
+    'error.help.401' => 'Connectez-vous pour utiliser cette fonction.',
+    'error.title.403' => 'Accès indisponible',
+    'error.help.403' => 'Ouvrez le lien de partage valide et saisissez le mot de passe si nécessaire. Les téléchargements doivent être autorisés par l’expéditeur.',
+    'error.title.404' => 'Ce contenu est indisponible',
+    'error.help.404' => 'Le lien a peut-être expiré ou le contenu a été supprimé. Vérifiez l’adresse ou demandez un nouveau lien à l’expéditeur.',
+    'error.title.413' => 'Le fichier est trop volumineux',
+    'error.help.413' => 'Choisissez un fichier plus petit. L’administrateur peut vérifier les limites du serveur.',
+    'error.title.419' => 'Ce formulaire n’est plus valide',
+    'error.help.419' => 'Rechargez la page et renvoyez le formulaire. Les modifications non enregistrées peuvent devoir être saisies à nouveau.',
+    'error.title.429' => 'Veuillez patienter',
+    'error.help.429' => 'Trop de tentatives ont été effectuées. Veuillez réessayer plus tard.',
+    'error.title.500' => 'Une erreur est survenue',
+    'error.help.500' => 'Veuillez réessayer plus tard. Si le problème persiste, contactez le responsable de la plateforme.',
+    'error.title.503' => 'Temporairement indisponible',
+    'error.help.503' => 'Veuillez réessayer plus tard. Le responsable peut consulter les journaux du serveur.',
+
     'rooms.error_help' => 'Le lien a peut-être expiré ou le salon a été supprimé. Vérifiez l’adresse ou demandez un nouveau lien à l’expéditeur.',
     'rooms.disabled_help' => 'Listening Rooms sont actuellement désactivés. Contactez l’expéditeur ou réessayez plus tard.',
     'rooms.back_to_rooms' => 'Retour à mes salons',

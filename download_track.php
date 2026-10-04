@@ -12,11 +12,11 @@ if($albumId>0){
     $s=$pdo->prepare('SELECT s.id share_id,s.password_hash,s.expires_at,s.allow_download,t.* FROM tracks t JOIN shares s ON s.album_id=t.album_id JOIN albums a ON a.id=t.album_id WHERE a.deleted_at IS NULL AND s.token=? AND t.id=?');
     $s->execute([$token,$trackId]);
     $row=$s->fetch();
-    if(!$row || !$row['allow_download'] || !share_access_granted(['id'=>$row['share_id'],'password_hash'=>$row['password_hash'],'expires_at'=>$row['expires_at']])){http_response_code(403);exit;}
+    if(!$row || !$row['allow_download'] || !share_access_granted(['id'=>$row['share_id'],'password_hash'=>$row['password_hash'],'expires_at'=>$row['expires_at']])){app_error(403);}
 }
-if(!$row){http_response_code(404);exit;}
+if(!$row){app_error(404);}
 $file=__DIR__.'/uploads/audio/'.$row['audio_file'];
-if(!is_file($file)){http_response_code(404);exit;}
+if(!is_file($file)){app_error(404);}
 record_statistic('track_download',(int)$row['album_id'],(int)($row['share_id']??0),$trackId);
 session_write_close();
 $downloadName=basename((string)$row['original_name']);
