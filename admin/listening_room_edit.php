@@ -61,13 +61,22 @@ render_header($id?$room['title']:t('rooms.new'), true);
 <div class="col-md-6"><label class="form-label" for="roomPassword"><?=e(t('text.optionales.passwort'))?></label><input id="roomPassword" class="form-control" type="password" name="password" autocomplete="new-password" placeholder="<?=e(t('text.unverandert.lassen'))?>"><?php if($room['password_hash']):?><label class="form-check mt-2"><input class="form-check-input" type="checkbox" name="remove_password"><span class="form-check-label"><?=e(t('rooms.remove_password'))?></span></label><?php endif?></div>
 <div class="col-md-6 align-self-center"><label class="form-check"><input class="form-check-input" type="checkbox" name="allow_download" <?=$room['allow_download']?'checked':''?>><span class="form-check-label"><?=e(t('rooms.downloads'))?></span></label></div>
 </div></div></div>
-<h2 class="h4"><?=e(t('rooms.selection'))?></h2><p class="text-body-secondary"><?=e(t('rooms.selection_help'))?></p>
+<div data-room-picker class="room-picker mb-4">
+<div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><div><h2 class="h4 mb-1"><?=e(t('rooms.selection'))?></h2><p class="text-body-secondary mb-0"><?=e(t('rooms.picker_help'))?></p></div><span class="badge text-bg-primary align-self-start" data-room-count aria-live="polite"></span></div>
+<div class="row g-3"><div class="col-lg-7"><div class="card"><div class="card-body">
+<label class="form-label" for="roomTrackSearch"><?=e(t('rooms.search'))?></label><input id="roomTrackSearch" type="search" class="form-control mb-3" autocomplete="off" data-room-filter placeholder="<?=e(t('rooms.search'))?>">
+<div class="room-library">
 <?php $groups=[];foreach($available as $track)$groups[$track['album_id']][]=$track;foreach($groups as $albumId=>$tracks):?>
-<fieldset class="card mb-3"><div class="card-body"><legend class="h5"><?=e($tracks[0]['album_title'])?> <small class="text-body-secondary"><?=e($tracks[0]['artist'])?></small></legend><button class="btn btn-sm btn-outline-secondary mb-3" type="button" data-room-select-album><?=e(t('rooms.select_album'))?></button>
-<?php foreach($tracks as $track):?><label class="form-check mb-2"><input class="form-check-input" type="checkbox" name="tracks[]" value="<?=(int)$track['id']?>" <?=in_array((int)$track['id'],$selected,true)?'checked':''?>><span class="form-check-label"><?=e($track['title'])?></span></label><?php endforeach?></div></fieldset><?php endforeach?>
+<details class="room-album" data-room-album data-search="<?=e(mb_strtolower($tracks[0]['album_title'].' '.$tracks[0]['artist']))?>">
+<summary><span><strong><?=e($tracks[0]['album_title'])?></strong><small class="d-block text-body-secondary"><?=e($tracks[0]['artist'])?> · <?=count($tracks)?> <?=e(t('text.titel'))?></small></span><span class="badge text-bg-secondary" data-album-count></span></summary>
+<div class="room-album-tracks"><button class="btn btn-sm btn-outline-secondary mb-3" type="button" data-room-select-album><?=e(t('rooms.select_album'))?></button>
+<?php foreach($tracks as $track):?><label class="room-picker-track" data-search="<?=e(mb_strtolower($track['title']))?>"><input class="form-check-input mt-0 flex-shrink-0" type="checkbox" name="tracks[]" value="<?=(int)$track['id']?>" data-title="<?=e($track['title'])?>" data-album="<?=e($track['album_title'])?>" <?=in_array((int)$track['id'],$selected,true)?'checked':''?>><span><?=e($track['title'])?></span></label><?php endforeach?></div></details><?php endforeach?>
+<p class="text-body-secondary py-3 mb-0" data-room-no-matches hidden><?=e(t('search.empty'))?></p>
 <?php if(!$available):?><p class="text-body-secondary"><?=e(t('rooms.no_tracks'))?></p><?php endif?>
+</div></div></div></div>
+<div class="col-lg-5"><div class="card room-selected-card"><div class="card-body"><div class="d-flex align-items-center justify-content-between gap-2 mb-3"><h3 class="h6 mb-0"><?=e(t('rooms.selected'))?></h3><button type="button" class="btn btn-sm btn-outline-secondary" data-room-clear><?=e(t('rooms.clear'))?></button></div><p class="small text-body-secondary" data-room-selection-empty><?=e(t('rooms.selection_empty'))?></p><div class="room-selected-list" data-room-selected></div></div></div></div>
+</div></div>
 <button class="btn btn-primary"><?=e(t('rooms.save'))?></button>
 </form>
 <?php if($id):?><form method="post" class="mt-4" data-confirm="<?=e(t('rooms.delete_confirm'))?>"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete"><button class="btn btn-outline-danger"><?=e(t('rooms.delete'))?></button></form><?php endif?>
-<script src="<?=e(asset_url('assets/js/listening-rooms.js'))?>"></script>
 <?php render_footer();

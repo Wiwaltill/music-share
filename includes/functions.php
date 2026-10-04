@@ -458,7 +458,7 @@ function upload_file(array $file, string $targetDir, array $allowedMime, int $ma
     if (!move_uploaded_file($file['tmp_name'], rtrim($targetDir, '/') . '/' . $name)) throw new RuntimeException(t('common.file_save_failed'));
     return $name;
 }
-function render_header(string $title, bool $admin = false): void {
+function render_header(string $title, bool $admin = false, string $bodyClass = ''): void {
     if (!headers_sent()) {
         header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
         header('Pragma: no-cache');
@@ -467,7 +467,7 @@ function render_header(string $title, bool $admin = false): void {
     $app = e(app_name());
     $flashes = get_flashes();
     $searchValue = e(trim((string)($_GET['q'] ?? '')));
-    echo '<!doctype html><html lang="'.e(current_language()).'"><head><script>(function(){var t=localStorage.getItem("musicshare-theme")||"auto";var d=t==="auto"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-bs-theme",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="'.asset_url('assets/css/app.css').'"></head><body class="bg-body-tertiary">';
+    echo '<!doctype html><html lang="'.e(current_language()).'"><head><script>(function(){var t=localStorage.getItem("musicshare-theme")||"auto";var d=t==="auto"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t;document.documentElement.setAttribute("data-bs-theme",d)})();</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'.e($title).' – '.$app.'</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"><link rel="stylesheet" href="'.asset_url('assets/css/app.css').'"></head><body class="bg-body-tertiary '.e($bodyClass).'">';
     echo '<nav class="navbar navbar-expand-lg bg-dark navbar-dark admin-navbar"><div class="container">';
     echo '<a class="navbar-brand d-flex align-items-center gap-3 me-lg-5" href="'.base_url($admin?'admin/index.php':'').'"><span class="brand-mark"><i class="bi bi-music-note-beamed"></i></span><span class="brand-copy"><span class="brand-title">'.$app.'</span><span class="brand-subtitle">'.e(t('open_source_album_manager')).'</span></span></a>';
     if ($admin && is_logged_in()) {
@@ -500,6 +500,7 @@ function render_footer(): void {
     echo '<script src="'.base_url('assets/js/dialogs.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
     if (is_admin_request()) echo '<script src="'.asset_url('assets/js/live-search.js').'"></script>';
     echo '<script src="'.base_url('assets/js/theme.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
+    if (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'listening_room_edit.php') echo '<script src="'.asset_url('assets/js/listening-rooms.js').'"></script>';
     echo '<script src="'.base_url('assets/js/player.js?v=' . rawurlencode(APP_VERSION)).'"></script></body></html>';
 }
 

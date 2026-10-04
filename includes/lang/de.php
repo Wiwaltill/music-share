@@ -1,5 +1,16 @@
 <?php
 return [
+    'rooms.picker_help' => 'Alben aufklappen oder gezielt suchen. Deine Auswahl bleibt rechts im Blick.',
+    'rooms.search' => 'Album, Interpret oder Track suchen',
+    'rooms.selected' => 'Deine Auswahl',
+    'rooms.clear' => 'Leeren',
+    'rooms.selection_empty' => 'Wähle Tracks aus der Bibliothek aus.',
+    'rooms.remove' => 'Entfernen',
+    'rooms.play_all' => 'Room abspielen',
+    'rooms.tracklist' => 'Trackliste',
+    'rooms.listen_hint' => 'Eine persönliche Auswahl für dich',
+    'rooms.personal_selection' => 'Persönliche Musikauswahl',
+
     'rooms.copied' => 'Link kopiert',
     'modules.title' => 'Module',
     'rooms.disabled' => 'Listening Rooms sind nicht aktiviert.',
