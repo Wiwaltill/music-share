@@ -7,9 +7,9 @@
 A self-hosted platform for presenting, streaming and sharing music albums.
 Built for musicians, producers, DJs and audio engineers.
 
-[Installation](#installation) · [Features](#features) · [Backups](#updates--backups) · [Contributing](CONTRIBUTING.md)
+[Installation](#installation) · [Features](#features) · [Backups](#updates--backups) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md)
 
-**PHP 8.2+ · MySQL / MariaDB · MIT License**
+**v2.0.0 · PHP 8.2+ · MySQL / MariaDB · MIT License**
 
 </div>
 
