@@ -12,8 +12,10 @@ helper = pathlib.Path(__file__).resolve().parents[1] / 'includes/errors.php'
 with tempfile.TemporaryDirectory() as directory:
     root = pathlib.Path(directory)
     php = ("<?php $config=['app'=>['language'=>'en']]; require " + repr(str(helper)) + "; app_error((int)($_GET['status'] ?? 404));")
-    for name in ['share.php', 'stream.php', 'social_cover.php', 'track_upload.php']:
+    for name in ['share.php', 'stream.php', 'social_cover.php', 'track_upload.php', 'comments.php']:
         (root / name).write_text(php)
+    (root / 'admin').mkdir()
+    (root / 'admin/comments.php').write_text(php)
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0))
         port = sock.getsockname()[1]
@@ -44,6 +46,15 @@ with tempfile.TemporaryDirectory() as directory:
             assert json.loads(body)['ok'] is False
             assert json.loads(body)['error'] == 'http_' + str(status)
             assert 'application/json' in headers['Content-Type']
+        # Identical filenames must not classify the backend page as the public API.
+        status, headers, body = request('comments.php?status=401')
+        assert status == 401 and 'application/json' in headers['Content-Type']
+        assert json.loads(body)['error'] == 'http_401'
+        status, headers, body = request('admin/comments.php?status=401')
+        assert status == 401 and 'text/html' in headers['Content-Type']
+        assert b'app-error-card' in body
+        status, headers, body = request('admin/comments.php?status=401', 'application/json')
+        assert status == 401 and json.loads(body)['error'] == 'http_401'
         for path in ['stream.php', 'social_cover.php']:
             status, headers, body = request(path)
             assert status == 404 and body == b''

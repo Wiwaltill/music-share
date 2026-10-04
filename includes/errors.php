@@ -2,9 +2,11 @@
 declare(strict_types=1);
 
 function error_response_kind(): string {
-    $script=basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    $path=str_replace('\\','/',(string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    $script=basename($path);
     if (in_array($script,['stream.php','room_stream.php','comment_stream.php','social_cover.php'],true)) return 'empty';
-    if (in_array($script,['comments.php','search.php','statistics_event.php','track_upload.php','track_delete.php','track_bulk_delete.php','track_update.php','direct_album_create.php','cover_candidate.php','album_title_candidate.php'],true)
+    if (($script==='comments.php' && !str_contains($path,'/admin/'))
+        || in_array($script,['search.php','statistics_event.php','track_upload.php','track_delete.php','track_bulk_delete.php','track_update.php','direct_album_create.php','cover_candidate.php','album_title_candidate.php'],true)
         || str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''),'application/json')) return 'json';
     return 'html';
 }
