@@ -200,9 +200,13 @@ with tempfile.TemporaryDirectory() as directory:
             assert status == 200, body
             comment = json.loads(body)['comments'][0]
             assert comment['body'] == fields['body'] and int(comment['position_seconds']) == 12
+            comment_audio = '/admin/comment_stream.php?comment_id=' + str(comment['id'])
+            assert request(client(), comment_audio)[2].endswith('/admin/login.php')
+            assert request(searcher, comment_audio)[1] == b'audio fixture'
             overview_path = '/admin/comments.php?album_id=' + str(ids['album'])
             status, overview, _ = request(searcher, overview_path)
             assert status == 200 and b'&lt;script&gt;literal feedback&lt;/script&gt;' in overview
+            assert b'data-comment-seek' in overview and b'id="mainPlayer"' in overview
             assert b'Room feedback' not in overview
             assert request(searcher, overview_path, {'comment_id': comment['id']})[0] == 419
             assert request(visitor, '/comments.php', dict(fields, action='delete', id=comment['id']))[0] == 403
@@ -213,6 +217,7 @@ with tempfile.TemporaryDirectory() as directory:
             assert request(searcher, overview_path, delete_fields)[0] == 200
             remaining = json.loads(request(visitor, comments)[1])['comments']
             assert all(int(item['id']) != int(comment['id']) for item in remaining)
+            assert request(searcher, comment_audio)[0] == 404
             fixture('comments-disable')
             assert request(visitor, comments)[0] == 404
             fixture('comments-enable')

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 function error_response_kind(): string {
     $script=basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
-    if (in_array($script,['stream.php','room_stream.php','social_cover.php'],true)) return 'empty';
+    if (in_array($script,['stream.php','room_stream.php','comment_stream.php','social_cover.php'],true)) return 'empty';
     if (in_array($script,['comments.php','search.php','statistics_event.php','track_upload.php','track_delete.php','track_bulk_delete.php','track_update.php','direct_album_create.php','cover_candidate.php','album_title_candidate.php'],true)
         || str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''),'application/json')) return 'json';
     return 'html';

@@ -18,7 +18,9 @@
     for (const comment of data.comments) {
       const row = document.createElement('article');row.className = 'timestamp-comment';
       const header = document.createElement('div');header.className = 'comment-heading';
-      const seek = document.createElement('button');seek.type = 'button';seek.className = 'comment-timestamp';seek.textContent = time(Number(comment.position_seconds));
+      const seek = document.createElement('button');seek.type = 'button';seek.className = 'comment-timestamp';seek.textContent = '▶ ' + time(Number(comment.position_seconds));
+      seek.title = translate('comments.jump');
+      seek.setAttribute('aria-label', translate('comments.jump') + ' ' + time(Number(comment.position_seconds)));
       const trackId = Number(track.value);
       seek.addEventListener('click', () => document.dispatchEvent(new CustomEvent('musicshare:seek', {detail:{trackId, seconds:Number(comment.position_seconds)}})));
       const author = document.createElement('strong');author.textContent = comment.author;

@@ -63,12 +63,18 @@ document.addEventListener('DOMContentLoaded',()=>{
       updatePositionState();
     };
     if (current === index && audio.readyState >= 1) {
+      box.hidden = false; requestAnimationFrame(()=>box.classList.add('show'));
       seek(); audio.play()?.catch(()=>{});
     } else {
       pendingCommentSeek = seek;
       audio.addEventListener('loadedmetadata', seek, {once:true});
       start(index);
     }
+  });
+  document.querySelectorAll('[data-comment-seek]').forEach(button => {
+    button.addEventListener('click', () => document.dispatchEvent(new CustomEvent('musicshare:seek', {
+      detail: {trackId: Number(button.dataset.trackId), seconds: Number(button.dataset.seconds)}
+    })));
   });
   function previousTrack(){
     if(current<0)return;

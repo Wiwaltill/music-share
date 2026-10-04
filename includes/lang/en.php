@@ -10,6 +10,7 @@ return [
     'comments.time_short' => 'At',
     'comments.capture' => 'Use position',
     'comments.send_short' => 'Send',
+    'comments.jump' => 'Play from this position',
     'comments.title' => 'Comments',
     'comments.module_help' => 'Feedback on specific moments in a track. Enable separately for each share or room. Comments are visible to all recipients of the same link; names are self-reported.',
     'comments.enable' => 'Enable comments',

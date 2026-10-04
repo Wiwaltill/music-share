@@ -10,6 +10,7 @@ return [
     'comments.time_short' => 'À',
     'comments.capture' => 'Utiliser la position',
     'comments.send_short' => 'Envoyer',
+    'comments.jump' => 'Lire à partir de cette position',
     'comments.title' => 'Commentaires',
     'comments.module_help' => 'Commentaires sur un moment précis. Activez séparément pour chaque partage ou salon. Tous les destinataires du même lien voient les commentaires ; les noms sont déclarés par les auteurs.',
     'comments.enable' => 'Activer les commentaires',

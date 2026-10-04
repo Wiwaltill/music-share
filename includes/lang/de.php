@@ -10,6 +10,7 @@ return [
     'comments.time_short' => 'Bei',
     'comments.capture' => 'Position übernehmen',
     'comments.send_short' => 'Senden',
+    'comments.jump' => 'Ab dieser Stelle abspielen',
     'comments.title' => 'Kommentare',
     'comments.module_help' => 'Feedback zu einzelnen Stellen im Track. Pro Share oder Room separat freischalten. Kommentare sind für alle Empfänger desselben Links sichtbar; Namen werden selbst angegeben.',
     'comments.enable' => 'Kommentare aktivieren',
