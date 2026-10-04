@@ -1,5 +1,9 @@
 <?php
 return [
+    'rooms.error_help' => 'Le lien a peut-être expiré ou le salon a été supprimé. Vérifiez l’adresse ou demandez un nouveau lien à l’expéditeur.',
+    'rooms.disabled_help' => 'Listening Rooms sont actuellement désactivés. Contactez l’expéditeur ou réessayez plus tard.',
+    'rooms.back_to_rooms' => 'Retour à mes salons',
+
     'rooms.download_all_option' => 'Autoriser le téléchargement du salon complet en ZIP',
     'rooms.download_all' => 'Télécharger le salon',
     'rooms.sort_help' => 'Déplacez la poignée ou utilisez les flèches haut/bas, puis enregistrez.',

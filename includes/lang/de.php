@@ -1,5 +1,9 @@
 <?php
 return [
+    'rooms.error_help' => 'Der Link ist möglicherweise abgelaufen oder der Raum wurde entfernt. Bitte prüfe die Adresse oder frage den Absender nach einem neuen Link.',
+    'rooms.disabled_help' => 'Listening Rooms sind derzeit deaktiviert. Bitte wende dich an den Absender oder versuche es später erneut.',
+    'rooms.back_to_rooms' => 'Zu meinen Rooms',
+
     'rooms.download_all_option' => 'Kompletten Room als ZIP herunterladen erlauben',
     'rooms.download_all' => 'Room herunterladen',
     'rooms.sort_help' => 'Am Griff ziehen oder mit Pfeil hoch/runter sortieren. Danach speichern.',

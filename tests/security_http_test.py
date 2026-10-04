@@ -141,7 +141,10 @@ with tempfile.TemporaryDirectory() as directory:
             assert request(listener, room_stream)[0] == 200
             fixture('room-expire')
             assert request(listener, room_stream)[0] == 403
-            assert request(listener, room_page)[0] == 404
+            expired_room = request(listener, room_page)
+            assert expired_room[0] == 404
+            assert b'room-error-card' in expired_room[1]
+            assert b'ask the sender for a new link' in expired_room[1]
             stream = f'/stream.php?token=security-share&track={ids["track"]}'
             track_download = f'/download_track.php?token=security-share&track={ids["track"]}'
             album_download = '/download_album.php?token=security-share'

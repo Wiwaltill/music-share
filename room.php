@@ -4,7 +4,7 @@ require_once __DIR__.'/includes/listening_rooms.php';
 require_listening_rooms();
 $token=(string)($_GET['token'] ?? '');
 $room=public_room($token);
-if (!$room) { http_response_code(404); exit(t('rooms.unavailable')); }
+if (!$room) room_error_page(404, 'rooms.unavailable');
 $error='';
 if (!room_access_granted($room)) {
     if ($_SERVER['REQUEST_METHOD']==='POST') {

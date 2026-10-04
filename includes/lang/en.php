@@ -1,5 +1,9 @@
 <?php
 return [
+    'rooms.error_help' => 'The link may have expired or the room may have been removed. Check the address or ask the sender for a new link.',
+    'rooms.disabled_help' => 'Listening Rooms are currently disabled. Contact the sender or try again later.',
+    'rooms.back_to_rooms' => 'Back to my rooms',
+
     'rooms.download_all_option' => 'Allow complete room ZIP download',
     'rooms.download_all' => 'Download room',
     'rooms.sort_help' => 'Drag the handle or use up/down arrows to reorder. Save afterwards.',
