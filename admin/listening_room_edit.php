@@ -3,7 +3,7 @@ require_once __DIR__.'/../includes/bootstrap.php';
 require_once __DIR__.'/../includes/listening_rooms.php';
 require_login(); require_listening_rooms();
 $id = (int)($_GET['id'] ?? 0);
-$room = $id ? room_for_management($id) : ['title'=>'','description'=>'','expires_at'=>null,'password_hash'=>null,'allow_download'=>0,'allow_room_download'=>0,'owner_user_id'=>(int)current_user()['id']];
+$room = $id ? room_for_management($id) : ['title'=>'','description'=>'','expires_at'=>null,'password_hash'=>null,'allow_download'=>0,'allow_room_download'=>0,'allow_comments'=>0,'owner_user_id'=>(int)current_user()['id']];
 // Even admins select only tracks available to the room's owner.
 $stmt = $pdo->prepare("SELECT t.id,t.title,a.id album_id,a.title album_title,a.artist FROM tracks t JOIN albums a ON a.id=t.album_id JOIN users u ON u.id=? AND u.is_active=1 WHERE a.deleted_at IS NULL AND (u.role='admin' OR a.owner_user_id=u.id OR EXISTS(SELECT 1 FROM album_collaborators c WHERE c.album_id=a.id AND c.user_id=u.id)) ORDER BY a.title,a.id,t.disc_no,t.track_no,t.id");
 $stmt->execute([(int)$room['owner_user_id']]); $available=$stmt->fetchAll();
@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $room['title']=trim((string)($_POST['title'] ?? ''));
     $room['description']=trim((string)($_POST['description'] ?? ''));
+    $room['allow_comments']=!empty($_POST['allow_comments']) ? 1 : 0;
     $room['allow_room_download']=isset($_POST['allow_room_download']) ? 1 : 0;
     $room['allow_download']=isset($_POST['allow_download']) ? 1 : 0;
     $expiry=trim((string)($_POST['expires_at'] ?? ''));
@@ -36,9 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
             if ($id) {
-                $pdo->prepare('UPDATE listening_rooms SET title=?,description=?,expires_at=?,password_hash=?,allow_download=?,allow_room_download=? WHERE id=?')->execute([$room['title'],$room['description'],$room['expires_at'],$hash,$room['allow_download'],$room['allow_room_download'],$id]);
+                $pdo->prepare('UPDATE listening_rooms SET title=?,description=?,expires_at=?,password_hash=?,allow_download=?,allow_room_download=?,allow_comments=? WHERE id=?')->execute([$room['title'],$room['description'],$room['expires_at'],$hash,$room['allow_download'],$room['allow_room_download'],$room['allow_comments'],$id]);
             } else {
-                $pdo->prepare('INSERT INTO listening_rooms(owner_user_id,title,description,expires_at,password_hash,allow_download,allow_room_download,token) VALUES(?,?,?,?,?,?,?,?)')->execute([$room['owner_user_id'],$room['title'],$room['description'],$room['expires_at'],$hash,$room['allow_download'],$room['allow_room_download'],random_token(24)]);
+                $pdo->prepare('INSERT INTO listening_rooms(owner_user_id,title,description,expires_at,password_hash,allow_download,allow_room_download,allow_comments,token) VALUES(?,?,?,?,?,?,?,?,?)')->execute([$room['owner_user_id'],$room['title'],$room['description'],$room['expires_at'],$hash,$room['allow_download'],$room['allow_room_download'],$room['allow_comments'],random_token(24)]);
                 $id=(int)$pdo->lastInsertId();
             }
             $pdo->prepare('DELETE FROM listening_room_tracks WHERE room_id=?')->execute([$id]);
@@ -52,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 render_header($id?$room['title']:t('rooms.new'), true);
+if($id && get_setting('timestamp_comments_enabled','0')==='1') echo '<div class="mb-3"><a class="btn btn-outline-secondary" href="'.e(base_url('admin/comments.php?room_id='.$id)).'"><i class="bi bi-chat-left-text me-2"></i>'.e(t('comments.title')).'</a></div>';
 ?>
 <div class="d-flex justify-content-between gap-3 mb-4"><h1 class="h2"><?=e($id?$room['title']:t('rooms.new'))?></h1><a href="listening_rooms.php" class="btn btn-outline-secondary align-self-start"><?=e(t('text.zuruck'))?></a></div>
 <?php if($error):?><div class="alert alert-danger"><?=e($error)?></div><?php endif?>
@@ -63,6 +65,7 @@ render_header($id?$room['title']:t('rooms.new'), true);
 <div class="col-12"><label class="form-label" for="roomDescription"><?=e(t('rooms.description'))?></label><textarea id="roomDescription" class="form-control" name="description" rows="3"><?=e($room['description'])?></textarea></div>
 <div class="col-md-6"><label class="form-label" for="roomPassword"><?=e(t('text.optionales.passwort'))?></label><input id="roomPassword" class="form-control" type="password" name="password" autocomplete="new-password" placeholder="<?=e(t('text.unverandert.lassen'))?>"><?php if($room['password_hash']):?><label class="form-check mt-2"><input class="form-check-input" type="checkbox" name="remove_password"><span class="form-check-label"><?=e(t('rooms.remove_password'))?></span></label><?php endif?></div>
 <div class="col-md-6 align-self-center"><label class="form-check"><input class="form-check-input" type="checkbox" name="allow_download" <?=$room['allow_download']?'checked':''?>><span class="form-check-label"><?=e(t('rooms.downloads'))?></span></label><label class="form-check mt-2"><input class="form-check-input" type="checkbox" name="allow_room_download" <?=!empty($room['allow_room_download'])?'checked':''?>><span class="form-check-label"><?=e(t('rooms.download_all_option'))?></span></label></div>
+<?php if(get_setting('timestamp_comments_enabled','0')==='1'):?><div class="col-12"><label class="form-check"><input class="form-check-input" type="checkbox" name="allow_comments" <?=!empty($room['allow_comments'])?'checked':''?>><span class="form-check-label"><?=e(t('comments.allow'))?></span></label></div><?php else:?><input type="hidden" name="allow_comments" value="<?=!empty($room['allow_comments'])?'1':''?>"><?php endif?>
 </div></div></div>
 <div data-room-picker data-order="<?=e(json_encode($selected))?>" class="room-picker mb-4">
 <div class="d-flex flex-wrap justify-content-between gap-2 mb-3"><div><h2 class="h4 mb-1"><?=e(t('rooms.selection'))?></h2><p class="text-body-secondary mb-0"><?=e(t('rooms.picker_help'))?></p></div><span class="badge text-bg-primary align-self-start" data-room-count aria-live="polite"></span></div>

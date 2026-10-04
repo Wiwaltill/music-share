@@ -81,6 +81,12 @@ The basic album-share workflow stays unchanged. Administrators can enable **List
 
 Rooms are managed separately from album shares. A room cannot expose tracks its owner no longer has access to, including trashed albums or revoked internal sharing. Passwords use the same attempt limits as album shares. Disabling the module makes room links unavailable without deleting saved rooms. Database backups include room settings and selections. Room playback does not currently contribute to album-share statistics, and complete-room ZIPs are cached separately in `storage/room-cache/`, with numbered filenames in listening order.
 
+### Comments
+
+Enable **Comments** under **Settings → Modules**, then enable feedback on individual album shares or rooms. Recipients can post a name, comment and timestamp, capture the current playback position, and click timestamps to play the relevant track at that point. Comments are visible to everyone with access to that same link; names are self-reported rather than verified accounts. Album managers and room owners/administrators can delete comments while viewing the share or room. Each link has its own discussion, and password, expiration and track access checks apply to both reading and posting.
+
+Posting is limited to ten comments per link and client IP within 15 minutes. The latest 200 comments per track are displayed. Comments are included in database backups and are deleted when their share, room or track is permanently deleted. Disabling the module hides discussions without deleting them. Basic shares have comments disabled by default. No notification emails are sent.
+
 ## First album
 
 1. Create an album or use the direct album upload in the dashboard.
@@ -149,3 +155,5 @@ Found a bug or have an idea? [Open an issue](https://github.com/Wiwaltill/music-
 ## License
 
 Music Share is released under the [MIT License](LICENSE).
+
+Kommentare lassen sich im Backend unter **Kommentare** einsehen und löschen. Die Album- und Room-Verwaltung verlinken direkt zum passenden Feedback. Auf großen Bildschirmen erscheint das öffentliche Formular rechts neben dem Inhalt, auf kleinen darunter.

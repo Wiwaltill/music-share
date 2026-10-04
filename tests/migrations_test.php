@@ -11,6 +11,7 @@ $pdo->exec($schema);
 run_migrations($pdo);
 if (migration_version($pdo) !== MUSIC_SHARE_SCHEMA_VERSION) throw new RuntimeException('Missing version marker');
 // Upgrading version 1 creates add-on tables without enabling the add-on.
+$pdo->exec('DROP TABLE track_comments');
 $pdo->exec('DROP TABLE listening_room_tracks');
 $pdo->exec('DROP TABLE listening_rooms');
 $pdo->exec("UPDATE settings SET setting_value='1' WHERE setting_key='schema_version'");
@@ -24,6 +25,17 @@ $pdo->exec("UPDATE settings SET setting_value='2' WHERE setting_key='schema_vers
 run_migrations($pdo);
 $columns = $pdo->query('SHOW COLUMNS FROM listening_rooms')->fetchAll(PDO::FETCH_COLUMN);
 if (!in_array('allow_room_download',$columns,true)) throw new RuntimeException('Room download migration failed');
+// Version 3 gains comment storage while every existing link remains opted out.
+$pdo->exec('DROP TABLE track_comments');
+$pdo->exec('ALTER TABLE shares DROP COLUMN allow_comments');
+$pdo->exec('ALTER TABLE listening_rooms DROP COLUMN allow_comments');
+$pdo->exec("UPDATE settings SET setting_value='3' WHERE setting_key='schema_version'");
+run_migrations($pdo);
+$pdo->query('SELECT 1 FROM track_comments LIMIT 1');
+foreach (['shares','listening_rooms'] as $table) {
+    $column=$pdo->query("SHOW COLUMNS FROM ".$table." LIKE 'allow_comments'")->fetch(PDO::FETCH_ASSOC);
+    if (!$column || (int)$column['Default']!==0) throw new RuntimeException('Comments must default to disabled');
+}
 // Simulate an older database, including absence of the settings table.
 $pdo->exec('DROP TABLE settings');
 $pdo->exec('ALTER TABLE tracks DROP COLUMN duration_seconds, DROP COLUMN disc_no');

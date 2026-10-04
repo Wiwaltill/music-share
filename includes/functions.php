@@ -475,6 +475,7 @@ function render_header(string $title, bool $admin = false, string $bodyClass = '
         echo '<div class="navbar-nav align-items-lg-center gap-lg-2 ms-lg-4">';
         echo '<a class="nav-link" href="'.base_url('admin/index.php').'"><i class="bi bi-disc me-2"></i>'.e(t('albums')).'</a>';
         if (get_setting('listening_rooms_enabled','0') === '1') echo '<a class="nav-link" href="'.base_url('admin/listening_rooms.php').'"><i class="bi bi-headphones me-2"></i>Listening Rooms</a>';
+        if (get_setting('timestamp_comments_enabled','0')==='1') echo '<a class="nav-link" href="'.base_url('admin/comments.php').'"><i class="bi bi-chat-left-text me-2"></i>'.e(t('comments.title')).'</a>';
         echo '<a class="nav-link" href="'.base_url('admin/statistics_overview.php').'"><i class="bi bi-bar-chart-line me-2"></i>'.e(t('stats.title')).'</a>';
         echo '<a class="nav-link" href="'.base_url('admin/profile.php').'"><i class="bi bi-person-circle me-2"></i>'.e(t('profile.title')).'</a>';
         if (is_admin()) { global $pdo; $trashCount=(int)$pdo->query("SELECT COUNT(*) FROM albums WHERE deleted_at IS NOT NULL")->fetchColumn(); if($trashCount>0){ echo '<a class="nav-link" href="'.base_url('admin/trash.php').'"><i class="bi bi-trash3 me-2"></i>'.e(t('trash')).' <span class="badge text-bg-secondary ms-1">'.$trashCount.'</span></a>'; } echo '<a class="nav-link" href="'.base_url('admin/settings.php').'"><i class="bi bi-gear me-2"></i>'.e(t('settings')).'</a>'; }
@@ -499,7 +500,9 @@ function render_footer(): void {
     if (is_admin_request()) echo '<script src="'.asset_url('assets/js/live-search.js').'"></script>';
     echo '<script src="'.base_url('assets/js/theme.js?v=' . rawurlencode(APP_VERSION)).'"></script>';
     if (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'listening_room_edit.php') echo '<script src="'.asset_url('assets/js/listening-rooms.js').'"></script>';
-    echo '<script src="'.base_url('assets/js/player.js?v=' . rawurlencode(APP_VERSION)).'"></script></body></html>';
+    echo '<script src="'.asset_url('assets/js/player.js').'"></script>';
+    if (basename((string)($_SERVER['SCRIPT_NAME'] ?? ''))==='room.php' && get_setting('timestamp_comments_enabled','0')==='1') echo '<script src="'.asset_url('assets/js/comments.js').'"></script>';
+    echo '</body></html>';
 }
 
 function share_access_granted(array $share): bool {

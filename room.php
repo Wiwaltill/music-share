@@ -28,7 +28,9 @@ render_header($room['title'], false, 'listening-room-page');
 $artwork=[];foreach($tracks as $item){if(!isset($artwork[$item['album_id']]))$artwork[$item['album_id']]=$item['cover_file'];}
 $albumCount=count($artwork);
 ?>
-<div class="room-public mx-auto">
+<?php $commentsEnabled=!empty($room['allow_comments']) && get_setting('timestamp_comments_enabled','0')==='1' && $tracks;?>
+<div class="room-public mx-auto<?=$commentsEnabled?' room-with-comments':''?>">
+<div class="room-content">
 <header class="room-hero"><div class="room-artwork" aria-hidden="true">
 <?php $covers=array_slice(array_values($artwork),0,4);while(count($covers)<4)$covers[]=null;foreach($covers as $image):?>
 <?php if($image):?><img src="<?=e(base_url('uploads/covers/'.rawurlencode(basename((string)$image))))?>" alt="" width="160" height="160"><?php else:?><span>♪</span><?php endif?>
@@ -44,10 +46,10 @@ $albumCount=count($artwork);
 <span class="room-track-number"><?=str_pad((string)++$trackIndex,2,'0',STR_PAD_LEFT)?></span><?php if($cover):?><img src="<?=e($cover)?>" width="56" height="56" class="rounded room-track-cover" alt="" loading="lazy"><?php else:?><span class="room-track-placeholder rounded" aria-hidden="true">♪</span><?php endif?>
 <button type="button" class="play-button flex-shrink-0" data-play data-src="<?=e(base_url('room_stream.php?token='.rawurlencode($token).'&track='.(int)$track['id']))?>" data-title="<?=e($track['title'])?>" data-artist="<?=e($track['artist'])?>" data-cover="<?=e($cover)?>" aria-label="<?=e(t('text.titel.abspielen'))?>">▶</button>
 <div class="flex-grow-1 min-w-0"><div class="fw-semibold text-truncate"><?=e($track['title'])?></div><div class="small text-body-secondary text-truncate"><?=e($track['artist'])?> · <?=e($track['album_title'])?></div></div>
-<?php if($room['allow_download']):?><a class="btn btn-outline-secondary btn-sm flex-shrink-0" href="<?=e(base_url('room_download.php?token='.rawurlencode($token).'&track='.(int)$track['id']))?>" aria-label="<?=e(t('text.titel.herunterladen'))?>"><i class="bi bi-download" aria-hidden="true"></i></a><?php endif?>
+<?php if($commentsEnabled):?><button type="button" class="track-comment-button" data-comment-open aria-label="<?=e(t('comments.write').' · '.$track['title'])?>" title="<?=e(t('comments.write'))?>"><i class="bi bi-pencil" aria-hidden="true"></i></button><?php endif?><?php if($room['allow_download']):?><a class="btn btn-outline-secondary btn-sm flex-shrink-0" href="<?=e(base_url('room_download.php?token='.rawurlencode($token).'&track='.(int)$track['id']))?>" aria-label="<?=e(t('text.titel.herunterladen'))?>"><i class="bi bi-download" aria-hidden="true"></i></a><?php endif?>
 </div><?php endforeach?>
 <?php if(!$tracks):?><div class="p-4 text-body-secondary"><?=e(t('rooms.no_tracks'))?></div><?php endif?>
-</div><footer class="room-credit">Music Share · <?=e(t('rooms.personal_selection'))?></footer></div>
+</div></div><?php if($commentsEnabled):?><aside class="comments-sidebar"><?php require_once __DIR__.'/includes/comments.php';render_comments('room',$token,$tracks);?></aside><?php endif?><footer class="room-credit">Music Share · <?=e(t('rooms.personal_selection'))?></footer></div>
 <div id="floatingPlayer" class="floating-player" hidden><div class="player-meta"><img data-room-now-cover alt="" hidden><div class="min-w-0"><div id="nowPlaying" class="fw-semibold text-truncate"></div><div class="small opacity-75 text-truncate" data-room-now-artist></div></div></div><audio id="mainPlayer" controls playsinline></audio><button id="closePlayer" class="player-close" type="button" aria-label="<?=e(t('text.player.schlieen'))?>">×</button></div>
 <script src="https://cdn.jsdelivr.net/npm/plyr@3.8.4/dist/plyr.polyfilled.min.js"></script>
 <script src="<?=e(asset_url('assets/js/room-public.js'))?>"></script>

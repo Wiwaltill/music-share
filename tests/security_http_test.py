@@ -92,6 +92,18 @@ with tempfile.TemporaryDirectory() as directory:
             assert request(listener, room_stream)[1] == b'audio fixture'
             assert request(listener, '/room_stream.php?token=room-test&track=999999')[0] == 404
             assert request(listener, room_download)[0] == 403
+            fixture('comments-enable')
+            room_comments = '/comments.php?scope=room&token=room-test&track_id=' + str(ids['track'])
+            assert request(client(), room_comments)[0] == 403
+            room_fields = {'csrf': csrf(listener, room_page), 'scope': 'room', 'token': 'room-test',
+                           'track_id': ids['track'], 'position_seconds': 5, 'author': 'Room guest', 'body': 'Room feedback'}
+            assert request(listener, '/comments.php', room_fields)[0] == 200
+            assert len(json.loads(request(listener, room_comments)[1])['comments']) == 1
+            assert request(client(), '/admin/comments.php')[2].endswith('/admin/login.php')
+            status, overview, _ = request(searcher, '/admin/comments.php?room_id=' + str(rooms['room']))
+            assert status == 200 and b'Room feedback' in overview
+            assert request(listener, '/comments.php?scope=room&token=room-test&track_id=999999')[0] == 404
+            fixture('comments-disable')
             # Exercise creation and deletion through the actual editor.
             create_path = '/admin/listening_room_edit.php'
             created = request(searcher, create_path, {'csrf': csrf(searcher, create_path), 'title': 'Created room', 'tracks[]': str(ids['track'])})
@@ -163,6 +175,48 @@ with tempfile.TemporaryDirectory() as directory:
             assert request(visitor, share_page, {'csrf': csrf(visitor, share_page), 'password': 'share-password'})[0] == 200
             assert request(visitor, stream)[1] == b'audio fixture'
             assert request(visitor, album_download)[1].startswith(b'PK')
+            # Timestamp feedback is opt-in and inherits the share's access checks.
+            comments = '/comments.php?scope=share&token=security-share&track_id=' + str(ids['track'])
+            assert request(visitor, comments)[0] == 404
+            fixture('comments-enable')
+            assert request(client(), comments)[0] == 403
+            locked_page = request(client(), share_page)[1]
+            assert b'data-comment-form' not in locked_page
+            public_page = request(visitor, share_page)[1]
+            assert b'data-comment-form' in public_page and b'data-comment-open' in public_page
+            assert b'href="#timestampComments"' not in public_page
+            assert public_page.index(b'data-comment-form') > public_page.index(b'track-public-list')
+            preview = request(searcher, '/share.php?album_id=' + str(ids['album']))[1]
+            assert b'data-comment-form' not in preview
+            assert b'class="public-album"' in preview and b'track-public-list' in preview
+            assert b'data-comment-open' not in preview
+            assert json.loads(request(visitor, comments)[1])['comments'] == []
+            fields = {'scope': 'share', 'token': 'security-share', 'track_id': ids['track'],
+                      'author': 'Listener', 'body': '<script>literal feedback</script>', 'position_seconds': 12}
+            assert request(visitor, '/comments.php', fields)[0] == 419
+            fields['csrf'] = csrf(visitor, share_page)
+            assert request(visitor, '/comments.php', dict(fields, position_seconds=31))[0] == 422
+            status, body, _ = request(visitor, '/comments.php', fields)
+            assert status == 200, body
+            comment = json.loads(body)['comments'][0]
+            assert comment['body'] == fields['body'] and int(comment['position_seconds']) == 12
+            overview_path = '/admin/comments.php?album_id=' + str(ids['album'])
+            status, overview, _ = request(searcher, overview_path)
+            assert status == 200 and b'&lt;script&gt;literal feedback&lt;/script&gt;' in overview
+            assert b'Room feedback' not in overview
+            assert request(searcher, overview_path, {'comment_id': comment['id']})[0] == 419
+            assert request(visitor, '/comments.php', dict(fields, action='delete', id=comment['id']))[0] == 403
+            for _ in range(9):
+                assert request(visitor, '/comments.php', fields)[0] == 200
+            assert request(visitor, '/comments.php', fields)[0] == 429
+            delete_fields = {'csrf': csrf(searcher, overview_path), 'comment_id': comment['id']}
+            assert request(searcher, overview_path, delete_fields)[0] == 200
+            remaining = json.loads(request(visitor, comments)[1])['comments']
+            assert all(int(item['id']) != int(comment['id']) for item in remaining)
+            fixture('comments-disable')
+            assert request(visitor, comments)[0] == 404
+            fixture('comments-enable')
+            fixture('clear-attempts')
             fixture('trash', ids['album'])
             assert json.loads(request(searcher, '/admin/search.php?q=album')[1])['albums'] == []
             assert request(visitor, share_page)[0] == 404

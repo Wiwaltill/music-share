@@ -51,6 +51,25 @@ document.addEventListener('DOMContentLoaded',()=>{
     const promise=plyr?plyr.play():audio.play();
     if(promise&&typeof promise.catch==='function')promise.catch(()=>updateTrackButtons());
   }
+  let pendingCommentSeek;
+  document.addEventListener('musicshare:seek', event => {
+    const index = buttons.findIndex(button => Number(button.closest('[data-row]')?.dataset.trackId) === Number(event.detail?.trackId));
+    const seconds = Number(event.detail?.seconds);
+    if (index < 0 || !Number.isFinite(seconds) || seconds < 0) return;
+    if (pendingCommentSeek) audio.removeEventListener('loadedmetadata', pendingCommentSeek);
+    const seek = () => {
+      if (audio.src !== buttons[index].dataset.src) return;
+      audio.currentTime = Number.isFinite(audio.duration) ? Math.min(seconds, audio.duration) : seconds;
+      updatePositionState();
+    };
+    if (current === index && audio.readyState >= 1) {
+      seek(); audio.play()?.catch(()=>{});
+    } else {
+      pendingCommentSeek = seek;
+      audio.addEventListener('loadedmetadata', seek, {once:true});
+      start(index);
+    }
+  });
   function previousTrack(){
     if(current<0)return;
     if(audio.currentTime>3){audio.currentTime=0;updatePositionState();return;}

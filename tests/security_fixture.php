@@ -60,3 +60,11 @@ if ($action === 'room-seed') {
 } elseif ($action === 'room-expire') {
     $pdo->exec("UPDATE listening_rooms SET expires_at=DATE_SUB(NOW(),INTERVAL 1 SECOND) WHERE token='room-test'");
 }
+
+if ($action === 'comments-enable') {
+    set_setting('timestamp_comments_enabled','1');
+    $pdo->exec("UPDATE shares SET allow_comments=1 WHERE token='security-share'");
+    $pdo->exec("UPDATE listening_rooms SET allow_comments=1 WHERE token='room-test'");
+} elseif ($action === 'comments-disable') {
+    set_setting('timestamp_comments_enabled','0');
+}

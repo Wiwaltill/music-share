@@ -7,6 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string)($_POST['action'] ?? '');
 
     if ($action === 'modules') {
+        set_setting('timestamp_comments_enabled', isset($_POST['timestamp_comments_enabled']) ? '1' : '0');
         set_setting('listening_rooms_enabled', isset($_POST['listening_rooms_enabled']) ? '1' : '0');
         flash('success', t('rooms.saved'));
         redirect('admin/settings.php#modules');
@@ -162,6 +163,7 @@ render_header(t('page.settings.title'), true);
         <form method="post">
           <input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="modules">
           <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" role="switch" name="listening_rooms_enabled" id="roomsEnabled" <?=get_setting('listening_rooms_enabled','0')==='1'?'checked':''?>><label class="form-check-label" for="roomsEnabled"><?=e(t('rooms.enable'))?></label></div>
+          <hr><h3 class="h6"><?=e(t('comments.title'))?></h3><p class="text-body-secondary"><?=e(t('comments.module_help'))?></p><label class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" role="switch" name="timestamp_comments_enabled" <?=get_setting('timestamp_comments_enabled','0')==='1'?'checked':''?>><span class="form-check-label"><?=e(t('comments.enable'))?></span></label>
           <button class="btn btn-primary"><?=e(t('text.speichern'))?></button>
         </form>
       </div>

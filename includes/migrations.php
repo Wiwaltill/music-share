@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Increment when adding a migration. The marker belongs to the database, so restores
 // cannot leave a filesystem cache claiming that an older database is up to date.
-const MUSIC_SHARE_SCHEMA_VERSION = 3;
+const MUSIC_SHARE_SCHEMA_VERSION = 4;
 
 function migration_version(PDO $pdo): int {
     try {
@@ -143,6 +143,25 @@ function run_migrations(PDO $pdo): void {
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         $roomColumns = $pdo->query('SHOW COLUMNS FROM listening_rooms')->fetchAll(PDO::FETCH_COLUMN);
         if (!in_array('allow_room_download', $roomColumns, true)) $pdo->exec('ALTER TABLE listening_rooms ADD COLUMN allow_room_download TINYINT(1) NOT NULL DEFAULT 0 AFTER allow_download');
+        foreach (['shares','listening_rooms'] as $table) {
+            $columns=$pdo->query('SHOW COLUMNS FROM '.$table)->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('allow_comments',$columns,true)) $pdo->exec('ALTER TABLE '.$table.' ADD COLUMN allow_comments TINYINT(1) NOT NULL DEFAULT 0');
+        }
+        $pdo->exec("CREATE TABLE IF NOT EXISTS track_comments (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ share_id INT UNSIGNED NULL,
+ room_id INT UNSIGNED NULL,
+ track_id INT UNSIGNED NOT NULL,
+ position_seconds INT UNSIGNED NOT NULL,
+ author VARCHAR(80) NOT NULL,
+ body TEXT NOT NULL,
+ created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ KEY idx_comment_share(share_id,track_id,id),
+ KEY idx_comment_room(room_id,track_id,id),
+ CONSTRAINT fk_comment_share FOREIGN KEY(share_id) REFERENCES shares(id) ON DELETE CASCADE,
+ CONSTRAINT fk_comment_room FOREIGN KEY(room_id) REFERENCES listening_rooms(id) ON DELETE CASCADE,
+ CONSTRAINT fk_comment_track FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         $stmt = $pdo->prepare("INSERT INTO settings(setting_key,setting_value) VALUES('schema_version',?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)");
         $stmt->execute([(string)MUSIC_SHARE_SCHEMA_VERSION]);
     } finally {
